@@ -1,73 +1,73 @@
 [![Gitter chat](https://badges.gitter.im/gitterHQ/gitter.png)](https://gitter.im/big-data-europe/Lobby)
 
-# Docker multi-container environment with Hadoop, Spark and Hive
+# Entorno multi-contenedor Docker con Hadoop, Spark y Hive
 
-This is it: a Docker multi-container environment with Hadoop (HDFS), Spark and Hive. But without the large memory requirements of a Cloudera sandbox. (On my Windows 10 laptop (with WSL2) it seems to consume a mere 3 GB.)
+Aquí está: un entorno multi-contenedor Docker con Hadoop (HDFS), Spark y Hive. Pero sin los grandes requisitos de memoria de un sandbox de Cloudera. (En mi portátil Windows 10 con WSL2 parece consumir solo 3 GB.)
 
-The only thing lacking, is that Hive server doesn't start automatically. To be added when I understand how to do that in docker-compose.
+Lo único que falta es que el servidor Hive no se inicia automáticamente. Se agregará cuando entienda cómo hacerlo en docker-compose.
 
 
-## Quick Start
+## Inicio Rápido
 
-To deploy an the HDFS-Spark-Hive cluster, run:
+Para desplegar el cluster HDFS-Spark-Hive, ejecuta:
 ```
   docker-compose up
 ```
 
-`docker-compose` creates a docker network that can be found by running `docker network list`, e.g. `docker-hadoop-spark-hive_default`.
+`docker-compose` crea una red docker que se puede encontrar ejecutando `docker network list`, por ejemplo `docker-hadoop-spark-hive_default`.
 
-Run `docker network inspect` on the network (e.g. `docker-hadoop-spark-hive_default`) to find the IP the hadoop interfaces are published on. Access these interfaces with the following URLs:
+Ejecuta `docker network inspect` en la red (por ejemplo `docker-hadoop-spark-hive_default`) para encontrar la IP en la que se publican las interfaces de hadoop. Accede a estas interfaces con las siguientes URLs:
 
 * Namenode: http://<dockerhadoop_IP_address>:9870/dfshealth.html#tab-overview
-* History server: http://<dockerhadoop_IP_address>:8188/applicationhistory
+* Servidor de historial: http://<dockerhadoop_IP_address>:8188/applicationhistory
 * Datanode: http://<dockerhadoop_IP_address>:9864/
-* Nodemanager: http://<dockerhadoop_IP_address>:8042/node
-* Resource manager: http://<dockerhadoop_IP_address>:8088/
-* Spark master: http://<dockerhadoop_IP_address>:8080/
-* Spark worker: http://<dockerhadoop_IP_address>:8081/
+* Gestor de nodos: http://<dockerhadoop_IP_address>:8042/node
+* Gestor de recursos: http://<dockerhadoop_IP_address>:8088/
+* Maestro Spark: http://<dockerhadoop_IP_address>:8080/
+* Worker Spark: http://<dockerhadoop_IP_address>:8081/
 * Hive: http://<dockerhadoop_IP_address>:10000
 
-## Important note regarding Docker Desktop
-Since Docker Desktop turned “Expose daemon on tcp://localhost:2375 without TLS” off by default there have been all kinds of connection problems running the complete docker-compose. Turning this option on again (Settings > General > Expose daemon on tcp://localhost:2375 without TLS) makes it all work. I’m still looking for a more secure solution to this.
+## Nota importante sobre Docker Desktop
+Desde que Docker Desktop desactivó "Exponer demonio en tcp://localhost:2375 sin TLS" por defecto, ha habido todo tipo de problemas de conexión ejecutando docker-compose completo. Activar esta opción nuevamente (Configuración > General > Exponer demonio en tcp://localhost:2375 sin TLS) hace que todo funcione. Todavía estoy buscando una solución más segura para esto.
 
 
-## Quick Start HDFS
+## Inicio Rápido HDFS
 
-Copy breweries.csv to the namenode.
+Copia breweries.csv al namenode.
 ```
   docker cp breweries.csv namenode:breweries.csv
 ```
 
-Go to the bash shell on the namenode with that same Container ID of the namenode.
+Ve al shell bash en el namenode con el mismo ID de contenedor del namenode.
 ```
   docker exec -it namenode bash
 ```
 
 
-Create a HDFS directory /data//openbeer/breweries.
+Crea un directorio HDFS /data/openbeer/breweries.
 
 ```
   hdfs dfs -mkdir -p /data/openbeer/breweries
 ```
 
-Copy breweries.csv to HDFS:
+Copia breweries.csv a HDFS:
 ```
   hdfs dfs -put breweries.csv /data/openbeer/breweries/breweries.csv
 ```
 
 
-## Quick Start Spark (PySpark)
+## Inicio Rápido Spark (PySpark)
 
-Go to http://<dockerhadoop_IP_address>:8080 or http://localhost:8080/ on your Docker host (laptop) to see the status of the Spark master.
+Ve a http://<dockerhadoop_IP_address>:8080 o http://localhost:8080/ en tu host Docker (portátil) para ver el estado del maestro Spark.
 
-Go to the command line of the Spark master and start PySpark.
+Ve a la línea de comandos del maestro Spark e inicia PySpark.
 ```
   docker exec -it spark-master bash
 
   /spark/bin/pyspark --master spark://spark-master:7077
 ```
 
-Load breweries.csv from HDFS.
+Carga breweries.csv desde HDFS.
 ```
   brewfile = spark.read.csv("hdfs://namenode:9000/data/openbeer/breweries/breweries.csv")
   
@@ -92,7 +92,7 @@ Load breweries.csv from HDFS.
 |  13|Perrin Brewing Co...|Comstock Park|   MI| 13|
 |  14|Witch's Hat Brewi...|   South Lyon|   MI| 14|
 |  15|Founders Brewing ...| Grand Rapids|   MI| 15|
-|  16|   Flat 12 Bierwerks| Indianapolis|   IN| 16|
+|  16|   Flat 12 Bierwerks| Indianapolis|   IN| 16 |
 |  17|Tin Man Brewing C...|   Evansville|   IN| 17|
 |  18|Black Acre Brewin...| Indianapolis|   IN| 18|
 +----+--------------------+-------------+-----+---+
@@ -102,18 +102,18 @@ only showing top 20 rows
 
 
 
-## Quick Start Spark (Scala)
+## Inicio Rápido Spark (Scala)
 
-Go to http://<dockerhadoop_IP_address>:8080 or http://localhost:8080/ on your Docker host (laptop) to see the status of the Spark master.
+Ve a http://<dockerhadoop_IP_address>:8080 o http://localhost:8080/ en tu host Docker (portátil) para ver el estado del maestro Spark.
 
-Go to the command line of the Spark master and start spark-shell.
+Ve a la línea de comandos del maestro Spark e inicia spark-shell.
 ```
   docker exec -it spark-master bash
   
   spark/bin/spark-shell --master spark://spark-master:7077
 ```
 
-Load breweries.csv from HDFS.
+Carga breweries.csv desde HDFS.
 ```
   val df = spark.read.csv("hdfs://namenode:9000/data/openbeer/breweries/breweries.csv")
   
@@ -146,12 +146,12 @@ only showing top 20 rows
 
 ```
 
-How cool is that? Your own Spark cluster to play with.
+¿Qué tan genial es eso? Tu propio cluster Spark para jugar.
 
 
-## Quick Start Hive
+## Inicio Rápido Hive
 
-Go to the command line of the Hive server and start hiveserver2
+Ve a la línea de comandos del servidor Hive e inicia hiveserver2
 
 ```
   docker exec -it hive-server bash
@@ -159,14 +159,14 @@ Go to the command line of the Hive server and start hiveserver2
   hiveserver2
 ```
 
-Maybe a little check that something is listening on port 10000 now
+Quizás una pequeña verificación de que algo está escuchando en el puerto 10000 ahora
 ```
   netstat -anp | grep 10000
 tcp        0      0 0.0.0.0:10000           0.0.0.0:*               LISTEN      446/java
 
 ```
 
-Okay. Beeline is the command line interface with Hive. Let's connect to hiveserver2 now.
+De acuerdo. Beeline es la interfaz de línea de comandos con Hive. Conectémonos a hiveserver2 ahora.
 
 ```
   beeline -u jdbc:hive2://localhost:10000 -n root
@@ -174,9 +174,9 @@ Okay. Beeline is the command line interface with Hive. Let's connect to hiveserv
   !connect jdbc:hive2://127.0.0.1:10000 scott tiger
 ```
 
-Didn't expect to encounter scott/tiger again after my Oracle days. But there you have it. Definitely not a good idea to keep that user on production.
+No esperaba encontrar scott/tiger nuevamente después de mis días de Oracle. Pero ahí lo tienes. Definitivamente no es una buena idea mantener ese usuario en producción.
 
-Not a lot of databases here yet.
+No hay muchas bases de datos aquí todavía.
 ```
   show databases;
   
@@ -188,14 +188,14 @@ Not a lot of databases here yet.
 1 row selected (0.335 seconds)
 ```
 
-Let's change that.
+Cambiemos eso.
 
 ```
   create database openbeer;
   use openbeer;
 ```
 
-And let's create a table.
+Y creemos una tabla.
 
 ```
 CREATE EXTERNAL TABLE IF NOT EXISTS breweries(
@@ -210,7 +210,7 @@ STORED AS TEXTFILE
 location '/data/openbeer/breweries';
 ```
 
-And have a little select statement going.
+Y hagamos una pequeña declaración select.
 
 ```
   select name from breweries limit 10;
@@ -231,26 +231,26 @@ And have a little select statement going.
 10 rows selected (0.113 seconds)
 ```
 
-There you go: your private Hive server to play with.
+Ahí lo tienes: tu servidor Hive privado para jugar.
 
 
-## Configure Environment Variables
+## Configurar Variables de Entorno
 
-The configuration parameters can be specified in the hadoop.env file or as environmental variables for specific services (e.g. namenode, datanode etc.):
+Los parámetros de configuración se pueden especificar en el archivo hadoop.env o como variables ambientales para servicios específicos (por ejemplo, namenode, datanode, etc.):
 ```
   CORE_CONF_fs_defaultFS=hdfs://namenode:8020
 ```
 
-CORE_CONF corresponds to core-site.xml. fs_defaultFS=hdfs://namenode:8020 will be transformed into:
+CORE_CONF corresponde a core-site.xml. fs_defaultFS=hdfs://namenode:8020 se transformará en:
 ```
   <property><name>fs.defaultFS</name><value>hdfs://namenode:8020</value></property>
 ```
-To define dash inside a configuration parameter, use triple underscore, such as YARN_CONF_yarn_log___aggregation___enable=true (yarn-site.xml):
+Para definir un guión dentro de un parámetro de configuración, usa triple guion bajo, como YARN_CONF_yarn_log___aggregation___enable=true (yarn-site.xml):
 ```
   <property><name>yarn.log-aggregation-enable</name><value>true</value></property>
 ```
 
-The available configurations are:
+Las configuraciones disponibles son:
 * /etc/hadoop/core-site.xml CORE_CONF
 * /etc/hadoop/hdfs-site.xml HDFS_CONF
 * /etc/hadoop/yarn-site.xml YARN_CONF
@@ -258,4 +258,4 @@ The available configurations are:
 * /etc/hadoop/kms-site.xml KMS_CONF
 * /etc/hadoop/mapred-site.xml  MAPRED_CONF
 
-If you need to extend some other configuration file, refer to base/entrypoint.sh bash script.
+Si necesitas extender algún otro archivo de configuración, consulta el script bash base/entrypoint.sh.

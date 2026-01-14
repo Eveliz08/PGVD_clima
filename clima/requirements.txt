@@ -1,0 +1,13 @@
+# Dependencias para la aplicación de clima
+numpy
+pandas
+scipy
+scikit-learn
+matplotlib
+seaborn
+pyspark
+kaggle
+streamlit
+streamlit-option-menu
+plotly
+xgboost
