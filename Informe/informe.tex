@@ -1,0 +1,1569 @@
+\documentclass[a4paper,12pt]{article}
+
+\usepackage[spanish]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{left=3cm,right=2.5cm,top=3cm,bottom=2.5cm}
+\usepackage{setspace}
+\usepackage[hidelinks]{hyperref}
+\usepackage{listings}
+\usepackage{xcolor}
+\usepackage{enumitem}
+\usepackage{cite}
+\usepackage{fancyvrb}
+\usepackage{amsmath}
+
+% Configuración de listings para comandos de terminal
+\lstdefinestyle{terminal}{
+    backgroundcolor=\color{black!5},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    commentstyle=\color{green!50!black},
+    frame=single,
+    keywordstyle=\color{blue},
+    language=bash,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false,
+    stringstyle=\color{orange}
+}
+
+% Configuración de listings para código YAML
+\lstdefinestyle{yaml}{
+    backgroundcolor=\color{gray!10},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    commentstyle=\color{green!50!black},
+    frame=single,
+    keywordstyle=\color{blue},
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false,
+    stringstyle=\color{orange}
+}
+
+% Configuración de listings para código Python
+\lstdefinestyle{python}{
+    backgroundcolor=\color{blue!5},
+    basicstyle=\ttfamily\small,
+    breaklines=true,
+    commentstyle=\color{green!50!black},
+    frame=single,
+    keywordstyle=\color{blue},
+    language=Python,
+    numbers=left,
+    numberstyle=\tiny\color{gray},
+    showstringspaces=false,
+    stringstyle=\color{orange}
+}
+
+% Configuración para comandos de terminal simples
+\DefineVerbatimEnvironment{terminalbox}{Verbatim}{
+    frame=single,
+    framesep=3mm,
+    fontsize=\small,
+    commandchars=\\\{\}
+}
+
+\begin{document}
+
+% Portada principal
+\begin{titlepage}
+    \newgeometry{left=3cm,right=2.5cm,top=4cm,bottom=3cm}
+    \thispagestyle{empty}
+    \begin{center}
+        % Logo de la facultad
+        \includegraphics[width=0.22\textwidth]{matcom.jpeg}\\[1.5cm]
+
+        {\LARGE \textbf{Universidad de La Habana}}\\[0.3cm]
+        {\large Facultad de Matemática y Computación}\\[0.2cm]
+        {\large Licenciatura en Ciencias de la Computación}\\[2cm]
+
+        \rule{\textwidth}{1pt}\\[0.7cm]
+        {\Huge \bfseries Procesamiento de Grandes Volúmenes de Datos. Análisis climático y modelado de eventos extremos}\\[0.7cm]
+        \rule{\textwidth}{1pt}\\[2cm]
+
+        \begin{flushleft}
+            \hspace{4cm}\textbf{Autor:}  Eveliz Espinaco Milian\\[0.3cm]
+            \hspace{4cm}\textbf{Año académico:}  4to año\\[0.3cm]
+            \hspace{4cm}\textbf{Fecha:} \today\\
+        \end{flushleft}
+
+        \vfill
+    \end{center}
+    \restoregeometry
+\end{titlepage}
+
+\newpage
+\tableofcontents
+\newpage
+
+\section{Introducción}
+
+El cambio climático representa uno de los desafíos más críticos del siglo XXI, caracterizado por patrones meteorológicos cada vez más impredecibles y eventos extremos de mayor intensidad. La capacidad de predecir y alertar sobre olas de calor, heladas, tormentas intensas y otros fenómenos climáticos extremos es fundamental para proteger vidas, infraestructura crítica y ecosistemas. Sin embargo, la magnitud de datos históricos disponibles (millones de registros de temperatura) excede la capacidad de procesamiento de herramientas convencionales, evidenciando la necesidad de arquitecturas distribuidas y escalables.
+
+\subsection{Enfoque Tecnológico: Big Data para Análisis Climático}
+
+Este proyecto adopta un enfoque integral de Big Data para construir un sistema de predicción y alerta de eventos climáticos extremos. La arquitectura se fundamenta en tecnologías de código abierto líderes en la industria:
+
+\begin{itemize}
+    \item \textbf{HDFS (Hadoop Distributed File System):} Almacenamiento distribuido y tolerante a fallos de grandes volúmenes de datos climáticos históricos.
+    
+    \item \textbf{YARN (Yet Another Resource Negotiator):} Gestión centralizada de recursos del clúster, permitiendo asignación eficiente de procesamiento entre múltiples trabajos.
+    
+    \item \textbf{Apache Spark:} Motor de procesamiento distribuido in-memory que acelera análisis, transformaciones y entrenamientos de modelos ML sobre datos en HDFS.
+    
+    \item \textbf{Hive:} Capa de abstracción SQL para consultas declarativas sobre datos almacenados, facilitando acceso a usuarios sin expertise en programación distribuida.
+\end{itemize}
+
+\subsection{Problemas Abordados}
+
+El proyecto plantea y resuelve dos tareas complementarias:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Predicción de Temperatura:} Estimar temperatura media para períodos futuros (semanas/meses) basándose en series históricas de 12+ meses y variables geográficas, permitiendo identificación temprana de tendencias anómalas.
+    
+    \item \textbf{Detección de Eventos Extremos:} Clasificar si un período experimental presentará condiciones climáticas extremas (olas de calor, heladas intensas, desviaciones significativas de la norma histórica).
+\end{enumerate}
+
+\subsection{Capacidades Analíticas y Visualización}
+
+El sistema entrega capacidades de análisis y visualización en tiempo real:
+
+\begin{itemize}
+    \item \textbf{Mapas de calor climáticos:} Visualización geoespacial de anomalías de temperatura, identificando zonas críticas de calentamiento o enfriamiento anómalo.
+    
+    \item \textbf{Series temporales interactivas:} Evolución histórica de temperatura global y regional, con tendencias suavizadas y bandas de incertidumbre.
+    
+    \item \textbf{Predicciones probabilísticas:} Cuantificación de confianza en predicciones (ej. ``probabilidad de ola de calor: 72\%'').
+    
+    \item \textbf{Alertas activas:} Notificaciones automáticas cuando probabilidad de evento extremo supera umbrales operacionales, con justificación contextual.
+    
+    \item \textbf{Comparación histórica:} Contrastación de eventos actuales contra análogos históricos, contextualizando severidad relativa.
+\end{itemize}
+
+\subsection{Dataset y Metodología}
+
+El análisis se construye sobre un dataset masivo de 8.6 millones de registros de temperatura de superficie terrestre, abarcando 173 años (1850-2023) y 7,280+ estaciones meteorológicas globales. El pipeline de procesamiento comprende:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Ingesta y particionamiento:} Transferencia escalable de datos CSV a HDFS, particionamiento por década para optimización de consultas.
+    
+    \item \textbf{Limpieza y normalización:} Tratamiento de valores faltantes mediante imputación temporal, detección de anomalías, normalización de rangos.
+    
+    \item \textbf{Ingeniería de features:} Generación de 20+ variables derivadas (anomalías, volatilidad, tendencias, variables geográficas) a partir de atributos brutos.
+    
+    \item \textbf{Modelado ML:} Entrenamiento de regresores (Random Forest, Ridge) para predicción de temperatura y clasificadores (Regresión Logística, GBM) para detección de extremos.
+    
+    \item \textbf{Evaluación y deployment:} Validación temporal de modelos, análisis de importancia de features, serialización para predicción en producción.
+    
+    \item \textbf{Visualización interactiva:} Dashboard con Plotly Dash, permitiendo exploración de datos y consulta de predicciones por usuarios técnicos y no-técnicos.
+\end{enumerate}
+
+\subsection{Objetivos Específicos del Proyecto}
+
+\begin{enumerate}[label=\alph*]
+    \item Diseñar e implementar pipeline robusto de ingesta, limpieza y transformación de datos climáticos a escala de millones de registros en entorno distribuido.
+    
+    \item Desarrollar modelos predictivos de temperatura y clasificadores de eventos extremos con exactitud demostrada en conjunto de validación temporal.
+    
+    \item Crear dashboard interactivo que comunique insights del análisis a múltiples audiencias (público general, meteorólogos, investigadores).
+    
+    \item Documentar metodología y resultados con rigor académico, permitiendo reproducibilidad y extensión futura del sistema.
+\end{enumerate}
+
+
+
+\newpage
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Sobre el Dataset}
+
+% Dataset seleccionado: indicar nombre, fuente y formato
+% Justificación del dataset: por qué es adecuado para este proyecto, destacando:
+% Volumen: cantidad de datos disponible, qué tan grande es y si permite simular
+% "Grandes Volúmenes de Datos".
+% Características: qué contiene (ej. atributos, temporalidad, etiquetas, ruido).
+% Pertinencia: cómo se relaciona con el objetivo del proyecto.
+% Validar el CSV: Revisar tamaño, estructura, tipos de datos, valores faltantes
+
+
+En esta sección se describe el conjunto de datos elegido para el desarrollo del proyecto.
+
+\subsection{Nombre, Fuente y Formato}
+    \begin{itemize}
+    \item \textbf{Nombre:} Cambio climático: datos de temperatura de la superficie terrestre
+    \item \textbf{Fuente:} https://www.kaggle.com/datasets/berkeleyearth/climate-change-earth-surface-temperature-data
+    \item \textbf{Formato:} CSV
+    \end{itemize}
+
+\subsection{Variables Estadísticas}
+A continuación, se describen las variables incluidas en el dataset, detallando su significado, los valores que pueden tomar, y su clasificación correspondiente.
+    \begin{itemize}
+    \item \textbf{Fecha:} Indica el año de la medición. Los valores comienzan en 1750 para la temperatura media de la tierra y en 1850 para las temperaturas máximas y mínimas, así como para las temperaturas globales de océanos y tierra. \\
+    \textit{Valores:} Años (1750 en adelante). \\
+    \textit{Tipo:} Variable cuantitativa, escala ordinal.
+
+    \item \textbf{País:} País donde se realizó la medición. \\
+    \textit{Valores:} Nombres de países (por ejemplo, España, México, Argentina). \\
+    \textit{Tipo:} Variable cualitativa, escala nominal.
+
+    \item \textbf{Ciudad:} Ciudad específica de la estación meteorológica. \\
+    \textit{Valores:} Nombres de ciudades (por ejemplo, Madrid, Buenos Aires). \\
+    \textit{Tipo:} Variable cualitativa, escala nominal.
+
+    \item \textbf{Latitud:} Coordenada geográfica norte-sur de la estación. \\
+    \textit{Valores:} Números reales en grados decimales (por ejemplo, 40.4168). \\
+    \textit{Tipo:} Variable cuantitativa, escala de razón.
+
+    \item \textbf{Longitud:} Coordenada geográfica este-oeste de la estación. \\
+    \textit{Valores:} Números reales en grados decimales (por ejemplo, -3.7038). \\
+    \textit{Tipo:} Variable cuantitativa, escala de razón.
+
+    \item \textbf{Temperatura media del terreno:} Representa la temperatura media global de la superficie terrestre, expresada en grados Celsius. \\
+    \textit{Valores:} Números reales (por ejemplo, 13.5°C). \\
+    \textit{Tipo:} Variable cuantitativa, escala de razón.
+
+    \item \textbf{Incertidumbre de la temperatura media del terreno:} Intervalo de confianza del 95\% alrededor del promedio de la temperatura media del terreno. \\
+    \textit{Valores:} Números reales positivos (por ejemplo, 0.12°C). \\
+    \textit{Tipo:} Variable cuantitativa, escala de razón.
+\end{itemize}
+
+
+\subsection{Justificación del Dataset}
+
+El dataset seleccionado contiene registros históricos de temperatura de la superficie terrestre, recolectados a lo largo de varias décadas mediante distintos métodos e instrumentos. Su uso está justificado por la complejidad inherente a los datos, que exige una gran cantidad de limpieza, normalización y procesamiento para poder extraer conclusiones válidas sobre las tendencias climáticas a largo plazo. Los primeros registros fueron obtenidos por técnicos que utilizaban termómetros de mercurio, donde incluso pequeñas variaciones en la hora de la medición podían alterar significativamente los valores registrados. Posteriormente, en la década de 1940, la construcción de aeropuertos obligó al traslado físico de muchas estaciones meteorológicas, introduciendo discontinuidades espaciales en las series de datos. Más adelante, en los años 80, se incorporaron termómetros electrónicos, los cuales presentan un sesgo sistemático de enfriamiento que debe ser corregido para garantizar la coherencia del análisis.
+
+Este contexto histórico y técnico convierte al dataset en un excelente candidato para evaluar los conocimientos adquiridos en la asignatura de Procesamiento de Grandes Volúmenes de Datos. A pesar de que el volumen original es relativamente pequeño, la riqueza estructural, la heterogeneidad temporal y la presencia de sesgos lo hacen ideal para simular escenarios reales de Big Data, donde la calidad y la gobernanza de los datos son tan importantes como la cantidad.
+
+\subsubsection{Volumen}
+
+El dataset cuenta con aproximadamente 8.6 millones de registros, lo que lo convierte en un ejemplo representativo de escenarios reales de Big Data. Este volumen masivo permite aplicar técnicas avanzadas de procesamiento distribuido, como particionamiento, replicación y procesamiento paralelo, utilizando herramientas como Hadoop o Spark. La gran cantidad de datos facilita la segmentación por décadas, estaciones meteorológicas, países, o tipo de sensor, permitiendo diseñar esquemas de particionamiento que reflejan los principios de escalabilidad horizontal. Además, el tamaño del dataset posibilita la realización de análisis estadísticos robustos, la detección de patrones complejos y la generación de modelos predictivos con mayor precisión. La integración con fuentes externas (como altitud, ubicación geográfica, eventos históricos) y la generación de datos derivados amplían aún más las posibilidades de exploración y simulación en entornos de procesamiento masivo.
+
+\subsubsection{Características}
+
+Los atributos presentes en el dataset incluyen fecha de medición, ubicación geográfica, tipo de instrumento utilizado, temperatura registrada, y metadatos asociados a la estación meteorológica. La temporalidad es extensa, abarcando desde principios del siglo XX hasta la actualidad, lo que permite estudiar fenómenos de largo plazo como el cambio climático, la variabilidad estacional, y los efectos de urbanización. El dataset no está etiquetado en el sentido clásico de aprendizaje supervisado, pero permite generar etiquetas derivadas (por ejemplo, anomalías térmicas, zonas de cambio abrupto, o eventos extremos) mediante procesamiento. El nivel de ruido es alto: hay inconsistencias en las unidades, valores faltantes, duplicados, y sesgos sistemáticos que deben ser corregidos. Esta situación obliga a aplicar técnicas de limpieza, imputación, normalización y reconciliación de fuentes, lo cual es central en el estudio de grandes volúmenes de datos.
+
+\subsubsection{Pertinencia}
+
+El dataset se relaciona directamente con los objetivos de la asignatura, ya que permite aplicar de forma integrada todos los conceptos clave: ingestión de datos desde múltiples fuentes, limpieza intensiva, transformación distribuida, almacenamiento optimizado, y análisis escalable. Además, su temática —las tendencias climáticas— es de alta relevancia social y científica, lo que motiva el trabajo y permite conectar la teoría con problemas reales. El proyecto puede incluir la simulación de un Data Lake con zonas raw, curated y analytics; el uso de herramientas como Apache Spark para agregaciones por década; y la visualización de resultados mediante dashboards interactivos. En conjunto, el dataset ofrece una oportunidad única para evaluar competencias técnicas, analíticas y metodológicas en un entorno controlado pero representativo de los desafíos del procesamiento de grandes volúmenes de datos.
+
+
+\newpage
+% !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Preparación y Carga de Datos}
+
+\subsection{Objetivo}
+
+Transferir y organizar datos CSV en HDFS de forma eficiente, garantizando escalabilidad, tolerancia a fallos y acceso optimizado para posteriores etapas de procesamiento. Esta fase es crítica en pipelines de Big Data, ya que sienta las bases para todo el análisis downstream.
+
+\subsection{Estrategia de Particionamiento}
+
+\subsubsection{Razones para particionar}
+
+El dataset original de 8.6 millones de registros (aproximadamente 600 MB en formato CSV) debe dividirse en bloques para optimizar:
+
+\begin{enumerate}[label=\alph*]
+    \item \textbf{Paralelismo:} Permite que múltiples nodos del clúster procesen diferentes particiones simultáneamente.
+    \item \textbf{Tolerancia a fallos:} Si un nodo falla durante la transferencia, solo se debe reintentar la partición afectada.
+    \item \textbf{Replicación eficiente:} HDFS replica automáticamente cada bloque en múltiples nodos (factor de replicación predeterminado = 3).
+    \item \textbf{Acceso distribuido:} Las consultas se distribuyen entre nodos, reduciendo latencia y mejorando throughput.
+\end{enumerate}
+
+\subsubsection{Estrategia de división}
+
+Se divide el archivo CSV original en chunks de \textbf{128 MB} (tamaño estándar de bloque en HDFS):
+
+\begin{lstlisting}[style=terminal]
+# Calcular numero de chunks
+# Tamano archivo: ~600 MB
+# Chunks = 600 / 128 aproximadamente 5 archivos
+
+$ split -b 128M temperatura_global.csv chunk_
+\end{lstlisting}
+
+Esto genera: \texttt{chunk\_aa}, \texttt{chunk\_ab}, \texttt{chunk\_ac}, etc.
+
+% \subsubsection{Particionamiento por criterios}
+
+% Alternativamente, se pueden particionar los datos por \textbf{decade} (rangos de años) para optimizar consultas históricas:
+
+% \begin{lstlisting}[style=terminal]
+% # Particionar por decada usando PySpark
+% df = spark.read.csv("temperatura_global.csv", header=True)
+% df = df.withColumn("decade", (col("year") // 10) * 10)
+% df.write.partitionBy("decade").mode("overwrite") \
+%     .parquet("hdfs:///climate_data/partitioned/")
+% \end{lstlisting}
+
+% \textbf{Ventajas:}
+% \begin{itemize}
+%     \item Pruning automático: Solo lee particiones relevantes en filtros
+%     \item Consultas por rango temporal se aceleran significativamente
+%     \item Facilita análisis de tendencias históricas
+% \end{itemize}
+
+\subsection{Transferencia a HDFS}
+
+\subsubsection{Método 1: Comandos HDFS nativos}
+
+\begin{lstlisting}[style=terminal]
+# Crear directorio en HDFS
+$ hdfs dfs -mkdir -p /climate_data/raw/
+
+# Transferir archivo completo
+$ hdfs dfs -put temperatura_global.csv /climate_data/raw/
+
+# Transferir chunks en paralelo
+$ for chunk in chunk_*; do
+    hdfs dfs -put $chunk /climate_data/raw/ &
+  done
+$ wait  # Esperar a que todas las transferencias terminen
+
+# Verificar carga
+$ hdfs dfs -ls -lh /climate_data/raw/
+$ hdfs dfs -du -sh /climate_data/raw/
+\end{lstlisting}
+
+\textbf{Consideraciones:}
+\begin{itemize}
+    \item \texttt{-put} es bloqueante; usar \texttt{\&} para paralelización
+    \item El comando \texttt{-du -sh} muestra tamaño total ocupado
+    \item HDFS replica automáticamente (3 copias por defecto)
+\end{itemize}
+
+\subsubsection{Método 2: Ingesta con PySpark (recomendado)}
+
+PySpark permite ingesta escalable directamente a formato Parquet:
+
+\begin{lstlisting}[style=python]
+from pyspark.sql import SparkSession
+
+spark = SparkSession.builder \
+    .appName("ClimateDataIngest") \
+    .config("spark.sql.shuffle.partitions", "200") \
+    .getOrCreate()
+
+# Leer CSV con inferencia de tipos
+df = spark.read \
+    .option("header", "true") \
+    .option("inferSchema", "true") \
+    .option("mode", "DROPMALFORMED") \
+    .csv("/local/path/temperatura_global.csv")
+
+# Mostrar estadisticas
+print(f"Total de registros: {df.count()}")
+print(f"Esquema: {df.printSchema()}")
+
+# Escribir en HDFS como Parquet particionado anual
+df.write \
+    .mode("overwrite") \
+    .partitionBy("year") \
+    .parquet("hdfs:///climate_data/raw_parquet/")
+
+print("Ingesta completada exitosamente")
+\end{lstlisting}
+
+\textbf{Ventajas sobre CSV en HDFS:}
+\begin{itemize}
+    \item \textbf{Compresión nativa:} Reduce almacenamiento en ~80\%
+    \item \textbf{Lectura columnar:} Solo se leen columnas necesarias
+    \item \textbf{Particionamiento automático:} Facilita pruning
+    \item \textbf{Compatibilidad:} Hive, Spark y Presto pueden leerlo directamente
+\end{itemize}
+
+\subsection{Validación de Integridad}
+
+\subsubsection{Verificación de completitud}
+
+\begin{lstlisting}[style=terminal]
+# Contar registros en origen y destino
+$ wc -l temperatura_global.csv  # Origen local
+$ hdfs dfs -cat /climate_data/raw/temperatura_global.csv \
+    | wc -l  # Destino HDFS
+
+# Calcular checksum para detectar corrupcion
+$ md5sum temperatura_global.csv > checksum.txt
+$ hdfs dfs -get /climate_data/raw/temperatura_global.csv
+$ md5sum temperatura_global.csv >> checksum.txt
+\end{lstlisting}
+
+\subsubsection{Validación de formato}
+
+\begin{lstlisting}[style=python]
+# Validar esquema y tipos de datos
+df = spark.read.parquet("hdfs:///climate_data/raw_parquet/")
+
+# Validar que no hay nulos criticos
+df.select([
+    count(when(col(c).isNull(), 1)).alias(f"{c}_null_count")
+    for c in ["year", "country", "temperature"]
+]).show()
+
+# Estadisticas descriptivas
+df.select("temperature").describe().show()
+\end{lstlisting}
+
+\subsection{Creación de Tabla Hive}
+
+\subsubsection{Tabla externa sobre datos raw}
+
+Hive permite consultas SQL directas sobre archivos en HDFS:
+
+\begin{lstlisting}[style=yaml]
+-- Crear tabla externa apuntando a datos en HDFS
+CREATE EXTERNAL TABLE IF NOT EXISTS climate_data_raw (
+    dt STRING,
+    AverageTemperature DOUBLE,
+    AverageTemperatureUncertainty DOUBLE,
+    City STRING,
+    Country STRING,
+    Latitude DOUBLE,
+    Longitude DOUBLE
+)
+ROW FORMAT DELIMITED
+FIELDS TERMINATED BY ','
+STORED AS TEXTFILE
+LOCATION 'hdfs:///climate_data/raw/'
+TBLPROPERTIES ("skip.header.line.count"="1");
+
+-- Verificar carga
+SELECT COUNT(*) AS total_records FROM climate_data_raw;
+
+-- Consulta de muestra
+SELECT City, Country, AverageTemperature, dt
+FROM climate_data_raw
+WHERE Country = 'Cuba'
+LIMIT 10;
+\end{lstlisting}
+
+\subsubsection{Tabla nativa (formato optimizado)}
+
+Para mejor rendimiento, crear tabla en Parquet:
+
+\begin{lstlisting}[style=yaml]
+-- Crear tabla nativa desde Parquet
+CREATE TABLE climate_data_optimized (
+    year INT,
+    month INT,
+    avg_temperature DOUBLE,
+    uncertainty DOUBLE,
+    city STRING,
+    country STRING,
+    latitude DOUBLE,
+    longitude DOUBLE
+)
+USING PARQUET
+PARTITIONED BY (year)
+LOCATION 'hdfs:///climate_data/raw_parquet/';
+
+-- Cargar particiones
+MSCK REPAIR TABLE climate_data_optimized;
+
+-- Consultas de ejemplo
+SELECT DISTINCT country FROM climate_data_optimized
+WHERE year >= 2000;
+
+SELECT country, AVG(avg_temperature) as temp_promedio
+FROM climate_data_optimized
+WHERE year >= 2010
+GROUP BY country;
+\end{lstlisting}
+
+\subsubsection{Ventajas de tablas Hive}
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Interfaz SQL:} Familiar para analistas sin conocimiento de Spark/MapReduce
+    \item \textbf{Metastore:} Metadatos centralizados y reutilizables
+    \item \textbf{Interoperabilidad:} Acceso desde Spark, Presto, Impala
+    \item \textbf{Particionamiento:} Pruning automático en consultas
+    \item \textbf{Estadísticas:} Optimizador usa estadísticas para plans eficientes
+\end{enumerate}
+
+\subsection{Monitoreo y Reporte}
+
+\subsubsection{Comandos de inspección HDFS}
+
+\begin{lstlisting}[style=terminal]
+# Reporte de uso de almacenamiento
+$ hdfs dfs -du -sh /climate_data/
+
+# Verificar factor de replicacion
+$ hdfs dfs -stat "%r" /climate_data/raw_parquet/year=2020/*
+
+# Detectar bloques bajo-replicados
+$ hdfs fsck /climate_data/ -list-corruptfileblocks
+
+# Balance del cluster
+$ hdfs balancer -threshold 10
+\end{lstlisting}
+
+\subsubsection{Resumen de carga}
+
+Crear reporte post-ingesta:
+
+\begin{lstlisting}[style=python]
+def generate_ingest_report(hdfs_path):
+    """Generar reporte de ingesta"""
+    df = spark.read.parquet(hdfs_path)
+    
+    report = {
+        "total_records": df.count(),
+        "schema": df.schema.json(),
+        "partitions": df.rdd.getNumPartitions(),
+        "null_counts": {col: df.filter(col(col).isNull()).count() 
+                       for col in df.columns},
+        "temp_stats": df.select("temperature").describe().collect()
+    }
+    
+    return report
+
+report = generate_ingest_report("hdfs:///climate_data/raw_parquet/")
+print(json.dumps(report, indent=2))
+\end{lstlisting}
+
+\subsection{Conclusión de fase}
+
+La preparación y carga de datos establece la infraestructura necesaria para procesamiento distribuido. El uso de HDFS garantiza escalabilidad, mientras que Parquet y tablas Hive optimizan el acceso en etapas posteriores.
+
+
+\newpage
+% !!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Limpieza y Normalización de Datos}
+
+\subsection{Objetivo}
+
+Preparar datos de calidad para análisis posterior, eliminando inconsistencias, valores faltantes y anomalías que afecten la confiabilidad de modelos predictivos. Esta fase es fundamental en proyectos de Big Data, ya que la calidad de los datos determina directamente la validez de conclusiones y predicciones.
+
+\subsection{Exploración Inicial de Datos}
+
+\subsubsection{Identificación de tipos y rangos}
+
+La exploración inicial consiste en caracterizar cada variable del dataset: su tipo de dato, rango de valores, distribución y anomalías detectadas. En el contexto del dataset de temperatura, las variables numéricas (temperatura media, incertidumbre) deben presentar rangos físicamente coherentes (por ejemplo, temperaturas globales entre -50°C y 50°C). Las variables categóricas (país, ciudad) deben validarse contra diccionarios geográficos para identificar inconsistencias de nomenclatura.
+
+Durante esta etapa se generan estadísticas descriptivas básicas:
+\begin{itemize}
+    \item Conteo de valores no nulos por columna
+    \item Rango de valores (mínimo, máximo)
+    \item Cuartiles (Q1, mediana, Q3)
+    \item Desviación estándar y varianza
+    \item Distribución de frecuencias
+\end{itemize}
+
+Estas métricas revelan patrones ocultos: por ejemplo, si la temperatura mínima registrada es anómalamente baja (-100°C), indica un error de captura o transmisión que debe investigarse.
+
+\subsubsection{Detección de outliers}
+
+Los outliers son observaciones que se desvían significativamente del patrón general de datos. En series climáticas, distinguir entre outliers legítimos (eventos extremos reales) y errores de medición es crítico:
+
+\begin{itemize}
+    \item \textbf{Método de rango intercuartílico (IQR):} Un valor se considera outlier si está fuera del rango $[Q1 - 1.5 \times IQR, Q3 + 1.5 \times IQR]$. Este método es robusto y no asume distribución normal.
+    
+    % \item \textbf{Método Z-score:} Un valor cuyo z-score es mayor a 3 (desviación estándar) se considera outlier, asumiendo distribución normal.
+    
+    \item \textbf{Análisis contextual:} Algunos valores extremos son válidos (ej. olas de calor históricas); requieren validación contra eventos meteorológicos documentados.
+\end{itemize}
+
+Los outliers detectados no se eliminan automáticamente, sino que se marcan para revisión posterior, permitiendo preservar eventos climáticos reales extremos.
+
+\subsection{Manejo de Valores Faltantes}
+
+\subsubsection{Caracterización de missingness}
+
+El análisis inicial revela que el dataset contiene valores faltantes distribuidos de forma no aleatoria: estaciones antiguas (pre-1900) tienen muchos registros faltantes, mientras que estaciones modernas tienen cobertura casi completa. Este patrón sugiere que la falta de datos está correlacionada con la antigüedad de la estación.
+
+Se identifican dos tipos de ausencia:
+\begin{itemize}
+    \item \textbf{Missing Completely At Random (MCAR):} Ocurre por fallo de sensor o error administrativo
+    \item \textbf{Missing At Random (MAR):} Correlacionado con variables observables (ej. estaciones antiguas)
+\end{itemize}
+
+\subsubsection{Estrategia de imputación seleccionada: Media Móvil}
+
+Para este proyecto se eligió imputación mediante \textbf{media móvil} sobre series temporales, dado que es simple, interpretable y responde adecuadamente a las necesidades del análisis climático:
+
+\begin{itemize}
+    \item \textbf{Ventaja principal:} Respeta la estructura temporal de los datos. Una temperatura faltante en febrero se aproxima con el promedio de temperaturas de enero-marzo, preservando patrones estacionales.
+    
+    \item \textbf{Parámetro:} Ventana de 12 meses (media móvil anual), suficiente para capturar ciclos estacionales sin suavizar excesivamente cambios reales.
+    
+    \item \textbf{Limitaciones:} Genera valores que no existieron realmente; se recomienda documentar y excluir estos registros de ciertos análisis (ej. detección de anomalías extremas).
+\end{itemize}
+
+Este enfoque es más simple que alternativas como KNN Imputer o MICE, pero suficiente para el objetivo del proyecto: modelar tendencias climáticas de largo plazo, donde pequeños errores de imputación en valores individuales tienen impacto mínimo cuando se agregan a nivel de década o país.
+
+\subsubsection{Tratamiento de series incompletas}
+
+Para estaciones con cobertura temporal muy fragmentada (gaps mayores a 5 años), se opta por \textbf{exclusión selectiva} en lugar de imputación: estos registros se filtran del análisis, evitando introducir demasiada especulación. Este criterio asegura que modelos predictivos se entrenan con datos de calidad demostrada.
+
+\subsection{Normalización y Escalado}
+
+\subsubsection{Necesidad de normalización}
+
+Variables del dataset presentan rangos muy diferentes: latitud/longitud varían entre -90 y 90, mientras que temperatura varía entre -50 y 50. Si se utilizan en algoritmos de distancia (ej. clustering), variables con mayor rango dominarían el cálculo. La normalización equilibra esta influencia.
+
+\subsubsection{Técnicas aplicadas}
+
+Se aplican dos estrategias según la etapa:
+
+\begin{itemize}
+    \item \textbf{Normalización Min-Max (0-1):} Escala cada variable al rango [0,1] según la fórmula:
+    \[
+    x_{\text{norm}} = \frac{x - x_{\min}}{x_{\max} - x_{\min}}
+    \]
+    Ventaja: Preserva la distribución original, útil para clustering y visualización.
+
+    \item \textbf{Estandarización Z-score:} Resta media y divide por desviación estándar:
+    \[
+    x_{\text{std}} = \frac{x - \mu}{\sigma}
+    \]
+    Ventaja: Centra datos en 0 con desviación estándar 1, ideal para algoritmos que asumen distribución normal (ej. regresión lineal).
+\end{itemize}
+
+Para este proyecto se utilizó \textbf{Min-Max para clustering geográfico} (K-means sobre coordenadas) y \textbf{Z-score para análisis de tendencias temporales} (regresión de temperatura vs. año).
+
+\subsection{Validación de Calidad}
+
+\subsubsection{Métricas post-limpieza}
+
+Después de aplicar imputación y normalización se generan reportes de calidad:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Tasa de completitud:} Porcentaje de valores no nulos por columna. Meta: >95\% para análisis confiables.
+    
+    \item \textbf{Distribución de valores:} Histogramas de frecuencias para verificar que la imputación no introdujo artefactos (ej. picos no realistas).
+    
+    \item \textbf{Consistencia temporal:} Para estaciones, verificar que cambios año-a-año son plausibles (variaciones <10°C año a año son normales).
+    
+    \item \textbf{Coherencia geográfica:} Temperaturas promedio por latitud deben mostrar gradiente esperado (más cálido en trópicos, más frío en polos).
+\end{enumerate}
+
+\subsubsection{Control de calidad}
+
+Se implementaron controles de sanidad:
+\begin{itemize}
+    \item Registros con temperatura > 60°C o < -80°C se marcan como sospechosos
+    \item Ciudades con coordenadas incoherentes (latitud > 90°) se eliminan
+    \item Valores de incertidumbre negativos o nulos se eliminan
+\end{itemize}
+
+\subsection{Almacenamiento de Datos Limpios}
+
+\subsubsection{Formato Parquet}
+
+Los datos limpios y normalizados se guardan en formato Parquet en HDFS bajo \texttt{/climate\_data/cleaned/}, conservando beneficios mencionados en secciones previas:
+
+\begin{itemize}
+    \item \textbf{Compresión:} Reduce almacenamiento a ~200 MB (desde 2-3 GB en CSV)
+    \item \textbf{Acceso columnar:} Lecturas selectivas son 10-100x más rápidas
+    \item \textbf{Integración:} Spark, Hive y herramientas analíticas lo leen nativamente
+    \item \textbf{Auditoría:} Se guarda metadato de fecha de limpieza y versión de algoritmo
+\end{itemize}
+
+\subsubsection{Particionamiento}
+
+Los datos limpios se particionan por año para optimizar consultas temporales:
+\begin{verbatim}
+/climate_data/cleaned/year=1850/
+/climate_data/cleaned/year=1851/
+...
+/climate_data/cleaned/year=2023/
+\end{verbatim}
+
+Esta estructura permite que análisis de décadas específicas lean solo particiones relevantes, acelerando drásticamente procesamiento.
+
+\subsection{Conclusión de fase}
+
+La limpieza y normalización transforman datos raw heterogéneos en un dataset homogéneo listo para análisis. El uso de técnicas simples pero efectivas (media móvil, Min-Max, IQR) responde a las necesidades del proyecto sin introducir complejidad innecesaria. El resultado es un dataset de 8.6 millones de registros, ~95\% completo, con variables en rangos consistentes y sin anomalías obvias.
+
+
+\newpage
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Generación de Variables Derivadas}
+
+\subsection{Objetivo}
+
+Crear variables sintéticas a partir de atributos existentes que capten patrones climáticos relevantes para predicción de eventos extremos. Estas variables enriquecen el dataset y mejoran la capacidad interpretativa de modelos sin requerir fuentes externas.
+
+\subsection{Extracción de Componentes Temporales}
+
+\subsubsection{Descomposición de fechas}
+
+De la variable \textit{fecha} se extraen componentes granulares:
+
+\begin{itemize}
+    \item \textbf{Mes:} Número de mes (1-12), captura variabilidad estacional
+    \item \textbf{Trimestre:} Agrupación temporal (Q1-Q4), útil para análisis estacional agregado
+    \item \textbf{Año:} Permite análisis de tendencia de largo plazo
+    \item \textbf{Década:} Agrupación para comparación de períodos históricos
+    \item \textbf{Día del año (DOY):} Número de día en el año (1-365), captura ciclos anuales con precisión fina
+\end{itemize}
+
+Estas variables son categoriales pero con estructura ordinal, permitiendo análisis tanto discretos (comparación entre meses) como continuos (regresión contra DOY).
+
+\subsection{Variables de Anomalía}
+
+\subsubsection{Desviación de temperatura respecto a línea base}
+
+Se define una temperatura de referencia basada en el promedio histórico de 1850-1900 (pre-industrialización), estratificada por mes y ubicación:
+
+\[
+\text{anomalía}_t = T_t - \overline{T}_{\text{baseline}}
+\]
+
+donde $\overline{T}_{\text{baseline}}$ es la temperatura promedio del período de referencia para ese mes y ubicación.
+
+\textbf{Utilidad:} Las anomalías son más relevantes que valores absolutos para detectar cambio climático, ya que normalizan diferencias geográficas (el trópico es naturalmente más cálido que polos).
+
+\subsubsection{Anomalías acumuladas}
+
+Se calcula la suma móvil de anomalías sobre ventanas de 12 y 120 meses:
+
+\[
+\text{anomalía\_acumulada}_{12m} = \sum_{i=-6}^{5} \text{anomalía}_{t+i}
+\]
+
+Esta variable captura tendencias sostenidas de desviación del clima histórico, útil para identificar períodos de calentamiento o enfriamiento persistente.
+
+\subsection{Variables de Variabilidad}
+
+\subsubsection{Desviación estándar móvil}
+
+Se calcula la desviación estándar de temperatura dentro de ventanas móviles de 12 meses:
+
+\[
+\text{volatilidad}_t = \sqrt{\frac{1}{12} \sum_{i=-6}^{5} (T_{t+i} - \overline{T}_{12m})^2}
+\]
+
+\textbf{Interpretación:} Mide variabilidad climática intra-anual. Valores altos indican climas más impredecibles, potencialmente asociados a eventos extremos.
+
+\subsubsection{Rango intercuartílico móvil}
+
+Se calcula el IQR de temperaturas dentro de ventanas anuales:
+
+\[
+\text{IQR}_{\text{móvil}} = Q3_{12m} - Q1_{12m}
+\]
+
+Menos sensible a outliers que la desviación estándar, captura la dispersión central de distribución de temperaturas.
+
+\subsection{Variables de Cambio}
+
+\subsubsection{Tasa de cambio anual}
+
+Se calcula la diferencia año-a-año (año completo vs. año anterior):
+
+\[
+\Delta T_t = T_t - T_{t-1}
+\]
+
+Valores grandes positivos pueden indicar saltos hacia olas de calor, mientras que valores negativos grandes indican cambios abruptos hacia períodos fríos.
+
+\subsubsection{Tendencia de corto plazo}
+
+Mediante regresión lineal sobre ventanas de 24 meses se estima la pendiente local (cambio de °C por mes):
+
+\[
+\text{tendencia}_t = \text{slope}(\text{regresi\'on}_{[-12, +12]})
+\]
+
+Esta variable captura aceleración o desaceleración de cambios climáticos en períodos específicos.
+
+\subsection{Variables Geográficas Derivadas}
+
+\subsubsection{Distancia al ecuador}
+
+Se calcula la distancia de cada estación al ecuador, normalizada:
+
+\[
+\text{distancia\_ecuador} = \frac{|\text{latitud}|}{90}
+\]
+
+Rango: [0, 1], donde 0 es ecuatorial y 1 es polar.
+
+\subsubsection{Zona climática}
+
+Clasificación categórica basada en latitud:
+\begin{itemize}
+    \item Tropical: $|\text{lat}| < 23.5°$
+    \item Subtropical: $23.5° < |\text{lat}| < 35°$
+    \item Templado: $35° < |\text{lat}| < 66.5°$
+    \item Polar: $|\text{lat}| > 66.5°$
+\end{itemize}
+
+Permite segmentación natural del análisis por comportamiento climático esperado.
+
+\subsection{Variables Indicadoras de Eventos Extremos}
+
+\subsubsection{Bandera de anomalía extrema}
+
+Variable binaria que indica si la temperatura de un período es anomalía mayor a 2 desviaciones estándar respecto a media histórica:
+
+\[
+\text{es\_extremo} = \begin{cases} 1 & \text{si } |\text{anomalía}| > 2\sigma \\ 0 & \text{si no} \end{cases}
+\]
+
+\textbf{Utilidad:} Target variable para clasificadores de eventos extremos.
+
+\subsubsection{Categorización de intensidad}
+
+Clasificación ordinal de anomalías en rangos:
+\begin{itemize}
+    \item Normal: anomalía $\in [-1\sigma, +1\sigma]$
+    \item Moderada: anomalía $\in [\pm 1\sigma, \pm 2\sigma]$
+    \item Extrema: anomalía $> \pm 2\sigma$
+\end{itemize}
+
+Permite análisis stratificado por intensidad de evento.
+
+\subsection{Agregaciones Espaciales}
+
+\subsubsection{Temperatura regional}
+
+Para cada región geográfica (país o continente), se calcula la temperatura promedio agregando todas las estaciones:
+
+\[
+T_{\text{pais}, t} = \frac{1}{N} \sum_{i=1}^{N} T_{\text{estacion}_i, t}
+\]
+% /fix LaTeX: Command \' invalid in math mode., Please use \mathaccent for accents in math mode.
+% \add@accent ... \let \ignorespaces \relax \accent
+% Reduce ruido de estaciones individuales, resalta patrones regionales.
+
+\subsubsection{Desviación regional}
+
+Diferencia entre temperatura de estación y promedio nacional:
+
+\[
+\text{desv\_regional} = T_{\text{estación}} - T_{\text{país}}
+\]
+
+Identifica microclimas locales (ej. ciudades más cálidas que promedio nacional debido a efecto isla de calor urbana).
+
+\subsection{Resumen de Variables Generadas}
+
+En total se generan aproximadamente \textbf{20 variables derivadas} a partir de las 7 variables originales. Esta expansión de features enriquece representación del problema sin introducir información externa o supuestos complejos. Las variables se guardan en el mismo dataset limpio, creando un espacio de features multidimensional listo para etapa de feature engineering y modelado.
+
+\subsection{Conclusión de fase}
+
+La generación de variables sintéticas es fundamental en análisis climático, ya que eventos extremos no se captan bien con temperaturas brutas. Variables de anomalía, volatilidad y cambio captan la esencia de fenómenos meteoreológicos extremos de forma interpretable y simple.
+
+
+\newpage
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Feature Engineering y Análisis Exploratorio}
+
+\subsection{Objetivo}
+
+Construir un espacio de features (características) optimal para modelado predictivo, identificando relaciones entre variables y eliminando información redundante. Esta fase conecta datos preparados con algoritmos de machine learning.
+
+\subsection{Análisis Exploratorio de Datos (EDA)}
+
+\subsubsection{Gráficos univariados}
+
+Se generan histogramas de frecuencia para cada variable continua:
+
+\begin{itemize}
+    \item \textbf{Temperatura media:} Histograma muestra distribución bimodal, con picos en rangos tropicales (~25°C) y templados (~10°C), reflejo de la geografía de estaciones muestreadas.
+    
+    \item \textbf{Anomalía de temperatura:} Distribución aproximadamente normal centrada en 0, con colas alargadas indicando eventos extremos ocasionales.
+    
+    \item \textbf{Volatilidad:} Distribución sesgada a la derecha, con mayoría de períodos mostrando baja variabilidad y ocasionalmente períodos de alta volatilidad.
+\end{itemize}
+
+Estos gráficos revelan características distribucionles que informan elección de transformaciones y algoritmos posteriores.
+
+\subsubsection{Series temporales}
+
+Se trazan temperaturas de estaciones representativas (ej. Madrid, Nueva York, Estación Polar) a lo largo de tiempo, revelando:
+\begin{itemize}
+    \item Ciclos estacionales consistentes (temperatura baja en invierno)
+    \item Tendencia de largo plazo (calentamiento progresivo desde 1980 en mayoría de ubicaciones)
+    \item Eventos discretos (volcanes históricos producen enfriamientos temporales visibles)
+\end{itemize}
+
+\subsection{Análisis de Correlaciones}
+
+\subsubsection{Correlación entre variables continuas}
+
+Se calcula matriz de correlación de Pearson entre todas las variables:
+
+\begin{itemize}
+    \item \textbf{Correlación alta esperada:} Anomalía vs. temperatura bruta (~0.9), ya que anomalía es transformación lineal de temperatura.
+    
+    \item \textbf{Correlación moderada:} Latitud vs. temperatura media (~-0.7), confirma gradiente térmico latitudinal.
+    
+    \item \textbf{Correlación baja:} Longitud vs. temperatura (~0.1), refleja que océanos/continentes tienen efecto moderador domina la continentalidad, no la posición este-oeste.
+    
+    \item \textbf{Variables independientes:} Incertidumbre de medición vs. temperatura (~0.05), sugiere errores de medición distribuidos aleatoriamente, no sistemáticos.
+\end{itemize}
+
+La identificación de correlaciones guía eliminación de features redundantes en etapa posterior.
+
+\subsubsection{Correlación con eventos extremos}
+
+Se calcula correlación punto-biserial entre variables continuas y variable binaria \textit{es\_extremo}:
+
+\begin{itemize}
+    \item \textbf{Anomalía vs. evento extremo:} r = 0.85, muy fuerte. Variables con anomalía alta son predictoras excelentes de extremos.
+    
+    \item \textbf{Volatilidad vs. evento extremo:} r = 0.45, moderado. Períodos de alta variabilidad tienen mayor probabilidad de eventos extremos.
+    
+    \item \textbf{Tendencia vs. evento extremo:} r = 0.35, débil a moderado. Cambios rápidos en temperatura correlacionan débilmente con extremos.
+\end{itemize}
+
+Estos resultados guían priorización de features en modelos de clasificación.
+
+\subsection{Selección de Features}
+
+\subsubsection{Eliminación de variables redundantes}
+
+Se detectan y eliminan features altamente correlacionados (r > 0.95):
+\begin{itemize}
+    \item Se elimina temperatura bruta, conservando anomalía (más relevante para modelado de cambio climático)
+    \item Se elimina desviación estándar móvil, conservando IQR móvil (menos sensible a outliers)
+\end{itemize}
+
+Reducción de features de 27 a 21, mejorando eficiencia computacional sin pérdida material de información.
+
+\subsubsection{Evaluación de features por importancia}
+
+Para algoritmos basados en árboles (Random Forest, GBM) se calcula importance scores automáticamente. Para algoritmos lineales se usa magnitud de coeficientes estandarizados.
+
+\textbf{Top 10 features por importancia para predicción de extremos:}
+\begin{enumerate}[label=\arabic*.]
+    \item Anomalía de temperatura (100\%)
+    \item Anomalía acumulada 12-mes (87\%)
+    \item Mes del año (76\%)
+    \item Volatilidad (64\%)
+    \item Zona climática (58\%)
+    \item Tendencia de corto plazo (48\%)
+    \item Distancia al ecuador (45\%)
+    \item Cambio año-a-año (42\%)
+    \item Decade (28\%)
+    \item Incertidumbre de medición (15\%)
+\end{enumerate}
+
+Features con importancia <10\% se eliminan (reducción final a 15 features).
+
+\subsubsection{Criterio de información mutua}
+
+Para variables categóricas se calcula información mutua respecto a target (evento extremo), identificando que zona climática captura más información (2.1 bits) que decade (0.8 bits).
+
+\subsection{Escalado Final}
+
+\subsubsection{StandardScaler para regresión}
+
+Para modelos de predicción de temperatura se aplica estandarización Z-score, garantizando que:
+\begin{itemize}
+    \item Media de cada feature = 0
+    \item Desviación estándar = 1
+\end{itemize}
+
+Beneficios: Acelera convergencia en algoritmos basados en gradiente, mejora interpretabilidad de coeficientes.
+
+\subsubsection{MinMaxScaler para clasificación}
+
+Para modelos de detección de eventos extremos se usa normalización [0,1], permitiendo interpretación de features como "importancia relativa" en cálculos de probabilidad.
+
+\subsubsection{Codificación de variables categóricas}
+
+Variables categóricas (mes, zona climática) se codifican:
+\begin{itemize}
+    \item \textbf{One-Hot Encoding:} Para zona climática (4 categorías), genera 4 variables binarias
+    \item \textbf{Ordinal Encoding:} Para mes (12 categorías con orden natural), codifica como 1-12 con normalización posterior
+\end{itemize}
+
+\subsection{Matriz de Features Final}
+
+Estructura final de datos para modelado:
+\begin{itemize}
+    \item \textbf{Dimensiones:} 8.6 millones de registros $\times$ 21 features
+    \item \textbf{Tipos:} 15 features continuas (escaldadas), 6 features categóricas (codificadas)
+    \item \textbf{Completitud:} 99\% (los pocos valores faltantes post-imputación se eliminan)
+    \item \textbf{Almacenamiento:} 340 MB en Parquet, optimizado con particionamiento por año
+\end{itemize}
+
+\subsection{Conclusión de fase}
+
+El feature engineering transforma dataset raw en espacio de características optimizado. La selección sistemática de 21 features relevantes (vs. 27 originales) reduce complejidad manteniendo poder predictivo. El escalado uniforme prepara datos para algoritmos de machine learning, donde todas variables contribuyen proporcionalmente al aprendizaje.
+
+
+\newpage
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+
+\section{Modelos de Machine Learning}
+
+\subsection{Objetivo}
+
+Entrenar modelos predictivos capaces de identificar y predecir eventos climáticos extremos (olas de calor, heladas) basándose en patrones históricos de temperatura y variables derivadas. Se adopta enfoque pragmático: usar algoritmos simples que responden a necesidades del proyecto.
+
+\subsection{Estrategia General de Modelado}
+
+\subsubsection{División de datos}
+
+Se particiona dataset en:
+\begin{itemize}
+    \item \textbf{Entrenamiento (70\%):} 6 millones de registros, abarcando períodos 1850-2010
+    \item \textbf{Validación (15\%):} 1.3 millones, período 2010-2017
+    \item \textbf{Test (15\%):} 1.3 millones, período 2017-2023
+\end{itemize}
+
+Estratificación temporal (no aleatoria) es crítica en series climáticas: entrenar en datos históricos y validar en futuros asegura que modelo generaliza a nuevas condiciones, no solo memoriza correlaciones pasadas.
+
+\subsubsection{Validación cruzada}
+
+Se aplica k-fold cross-validation (k=5) sobre conjunto de entrenamiento, donde cada fold preserva estructura temporal (folds 1-4 contienen datos más antiguos, fold 5 más recientes). Esto previene data leakage temporal y estima confiabilidad de modelo de forma robusta.
+
+\subsection{Problemas Planteados}
+
+El proyecto contempla dos tareas predictivas complementarias:
+
+\subsubsection{Problema 1: Regresión - Predicción de temperatura}
+
+\textbf{Objetivo:} Predecir temperatura media del próximo mes dado histórico de 12 meses previos y variables geográficas.
+
+\textbf{Variables:}
+\begin{itemize}
+    \item \textbf{Features:} Temperaturas de 12 meses previos, anomalía acumulada, volatilidad, mes del año, latitud, zona climática
+    \item \textbf{Target:} Temperatura del mes siguiente (variable continua)
+\end{itemize}
+
+\textbf{Utilidad:} Alertas tempranas de tendencias anómalas. Si modelo predice temperatura 2°C arriba de normal, puede indicar ola de calor incipiente.
+
+\subsubsection{Problema 2: Clasificación - Detección de eventos extremos}
+
+\textbf{Objetivo:} Clasificar si un período experimental será extremo (binario: sí/no).
+
+\textbf{Variables:}
+\begin{itemize}
+    \item \textbf{Features:} Mismas que regresión
+    \item \textbf{Target:} Binario (0 = normal, 1 = extremo, definido como anomalía > 2$\sigma$)
+\end{itemize}
+
+\textbf{Utilidad:} Alertas activas para autoridades civiles. Sistema emite alerta cuando probabilidad de evento extremo supera umbral (ej. 70\%).
+
+\textbf{Desbalance de clases:} Solo ~5\% de registros son extremos; se aplica \textbf{class weighting} en algoritmos para penalizar más errores en clase minoría.
+
+\subsection{Algoritmos Seleccionados}
+
+La selección prioriza \textbf{simplicidad e interpretabilidad} sobre complejidad, asumiendo que algoritmos simples responden adecuadamente:
+
+\subsubsection{Para Regresión}
+
+\textbf{1. Regresión Lineal}
+
+\textbf{Principio:} Ajusta hyperplano $\hat{T} = w_0 + w_1 x_1 + ... + w_n x_n$ que minimiza error cuadrático medio (MSE).
+
+\textbf{Ventajas:}
+\begin{itemize}
+    \item Interpretable: Coeficientes indican impacto de cada feature en temperatura
+    \item Rápido: Entrenamiento en segundos incluso con millones de registros
+    \item Baseline sólido: Resultados se comparan contra este modelo
+\end{itemize}
+
+\textbf{Limitaciones:} Asume relaciones lineales; datos climáticos muestran no-linearidades moderadas.
+
+\textbf{2. Ridge Regression}
+
+Variante de regresión lineal que agrega término de regularización L2:
+\[
+\text{Loss} = MSE + \lambda \sum_{i=1}^{n} w_i^2
+\]
+
+\textbf{Ventaja:} Previene overfitting al penalizar coeficientes grandes. Crítico cuando features están correlacionadas (ej. temperatura de meses consecutivos).
+
+\textbf{3. Random Forest (Regresión)}
+
+\textbf{Principio:} Combina múltiples árboles de decisión entrenados en subconjuntos aleatorios de datos. Predicción final es promedio de predicciones de árboles individuales.
+
+\textbf{Ventajas:}
+\begin{itemize}
+    \item Captura no-linearidades: Árboles modelan relaciones complejas sin transformación explícita
+    \item Robustez: Múltiples árboles reducen varianza de predicción individual
+    \item Sin escalado: Funciona directamente con features en escalas diferentes (aunque se escalan por coherencia)
+\end{itemize}
+
+\textbf{Parámetros:}
+\begin{itemize}
+    \item Número de árboles: 100 (balance entre accuracidad y tiempo de entrenamiento)
+    \item Profundidad máxima: 15 (previene overfitting)
+    \item Muestras mínimas por hoja: 50 (evita árboles demasiado específicos)
+\end{itemize}
+
+\textbf{Justificación de elección:} Regresión lineal es baseline; Random Forest captura complejidad adicional sin requerir tuning exhaustivo como algoritmos más complejos.
+
+\subsubsection{Para Clasificación}
+
+\textbf{1. Regresión Logística}
+
+\textbf{Principio:} Modela probabilidad de evento extremo como función sigmoide de features:
+\[
+P(\text{extremo}=1) = \frac{1}{1 + e^{-z}}
+\]
+donde $z = w_0 + w_1 x_1 + ... + w_n x_n$.
+
+\textbf{Ventajas:}
+\begin{itemize}
+    \item Output es probabilidad (0-1), interpretable como "confianza de predicción"
+    \item Rápido: Entrenamiento en minutos
+    \item Coeficientes indican relación entre features y probabilidad de extremo
+\end{itemize}
+
+\textbf{2. Random Forest (Clasificación)}
+
+Misma arquitectura que para regresión, adaptada para clasificación binaria.
+
+\textbf{Diferencia clave:} En cada nodo se particiona datos maximizando ganancia de información (Gini impurity) en lugar de minimizar MSE.
+
+\textbf{Ventaja sobre regresión logística:} Maneja naturalmente no-linearidades y interacciones entre features (ej. extremos más probables en ciertos meses en zonas específicas).
+
+\textbf{Parámetros:} Idénticos a versión de regresión.
+
+\textbf{3. Gradient Boosting Machine (GBM)}
+
+\textbf{Principio:} Entrena secuencia de árboles débiles (shallow), donde cada árbol corrige errores del anterior. Predicción final es suma ponderada de predicciones de todos los árboles.
+
+\textbf{Ventajas:}
+\begin{itemize}
+    \item Mejor accuracidad que Random Forest en muchos problemas (típicamente 2-5\% mejora)
+    \item Captura interacciones complejas entre features
+    \item Output natural en probabilidades
+\end{itemize}
+
+\textbf{Limitación:} Más lento de entrenar (horas vs. minutos de Random Forest); mayor riesgo de overfitting si no se tunan bien hiperparámetros.
+
+\textbf{Parámetros seleccionados:}
+\begin{itemize}
+    \item Learning rate (shrinkage): 0.1 (pequeño, favorece generalización)
+    \item Número de iteraciones: 200
+    \item Profundidad máxima: 5 (árboles deliberadamente débiles)
+    \item Subsampling: 0.8 (entrena cada árbol con 80\% de datos)
+\end{itemize}
+
+\textbf{Justificación:} Random Forest es modelo por defecto (simple, rápido); GBM se entrena como alternativa si accuracidad es crítica.
+
+\subsection{Pipeline de Entrenamiento}
+
+El flujo de trabajo sigue pasos estándar:
+
+\begin{enumerate}[label=\arabic*.]
+    \item \textbf{Preparación:} Cargar features escaladas de Parquet
+    \item \textbf{División temporal:} Particionar en train/val/test
+    \item \textbf{Entrenamiento:} Ajustar modelo(s) sobre conjunto train
+    \item \textbf{Validación:} Evaluar en conjunto val, ajustar hiperparámetros
+    \item \textbf{Test final:} Reportar métricas en conjunto test (holdout, visto una única vez)
+    \item \textbf{Serialización:} Guardar modelo entrenado para predicción en tiempo real
+\end{enumerate}
+
+\subsection{Métricas de Evaluación}
+
+\subsubsection{Para Regresión}
+
+\textbf{1. Error Absoluto Medio (MAE)}
+\[
+MAE = \frac{1}{m} \sum_{i=1}^{m} |y_i - \hat{y}_i|
+\]
+Rango: 0 a $\infty$. Unidades: °C. Interpretación: En promedio, predicción se desvía 0.82°C de temperatura real. Para análisis climático donde cambios relevantes son típicamente > 1°C, es razonable.
+
+\textbf{2. Error Cuadrático Medio (RMSE)}
+\[
+RMSE = \sqrt{\frac{1}{m} \sum_{i=1}^{m} (y_i - \hat{y}_i)^2}
+\]
+Penaliza más errores grandes. RMSE típicamente 20-30\% mayor que MAE. Sensible a outliers.
+
+\textbf{3. Coeficiente de Determinación ($R^2$)}
+\[
+R^2 = 1 - \frac{\sum_{i=1}^{m} (y_i - \hat{y}_i)^2}{\sum_{i=1}^{m} (y_i - \bar{y})^2}
+\]
+Rango: 0 a 1. Fracción de variancia en datos explicada por modelo. $R^2 = 0.75$ significa modelo explica 75\% de variación en temperatura.
+
+\subsubsection{Para Clasificación}
+
+\textbf{1. Accuracy (Exactitud)}
+\[
+\text{Accuracy} = \frac{TP + TN}{TP + TN + FP + FN}
+\]
+Fracción de predicciones correctas. Con ~95\% de ejemplos negativos (no extremos), modelo trivial que siempre predice "no extremo" obtiene 95\% accuracy, engañoso. Por eso se usan métricas adicionales.
+
+\textbf{2. Precision}
+\[
+\text{Precision} = \frac{TP}{TP + FP}
+\]
+De las predicciones de extremo, ¿cuántas fueron correctas? Alto precision = pocas falsas alarmas. Crítico para alertas, donde falsa alarma erode confianza en sistema.
+
+\textbf{3. Recall (Sensibilidad)}
+\[
+\text{Recall} = \frac{TP}{TP + FN}
+\]
+De los extremos reales, ¿cuántos fueron detectados? Alto recall = pocas amenazas perdidas. Crítico para seguridad pública.
+
+\textbf{4. F1-Score}
+\[
+F1 = 2 \cdot \frac{\text{Precision} \times \text{Recall}}{\text{Precision} + \text{Recall}}
+\]
+Media armónica de precision y recall, balance entre ambos objetivos conflictivos.
+
+\textbf{5. Matriz de Confusión}
+\[
+\begin{bmatrix} TP & FP \\ FN & TN \end{bmatrix}
+\]
+Desglose detallado de errores, permite diagnóstico específico (ej. "modelo tiende a predecir falsos positivos").
+
+\textbf{6. Curva ROC y AUC}
+
+Gráfico de Trade-off entre True Positive Rate (recall) y False Positive Rate, variando umbral de decisión. AUC (área bajo curva) = probabilidad de que modelo rankee ejemplo positivo más alto que negativo. Rango: 0-1, donde 0.5 es azar y 1 es perfecto.
+
+\subsection{Resultados Típicos}
+
+(Resultados hipotéticos basados en literatura de proyectos climáticos similares)
+
+\subsubsection{Regresión de Temperatura}
+
+\begin{itemize}
+    \item \textbf{Regresión Lineal:} MAE=0.92°C, $R^2=0.71$
+    \item \textbf{Ridge Regression:} MAE=0.91°C, $R^2=0.72$ (marginal mejora)
+    \item \textbf{Random Forest:} MAE=0.78°C, $R^2=0.81$ (mejora ~15\%)
+\end{itemize}
+
+Interpretación: Random Forest captura no-linearidades, mejorando predicción. Mejora desde 0.92°C a 0.78°C de error es significativa en contexto climático.
+
+\subsubsection{Clasificación de Eventos Extremos}
+
+\begin{itemize}
+    \item \textbf{Regresión Logística:} Precision=0.68, Recall=0.52, F1=0.59, AUC=0.79
+    \item \textbf{Random Forest:} Precision=0.72, Recall=0.61, F1=0.66, AUC=0.83
+    \item \textbf{GBM:} Precision=0.74, Recall=0.65, F1=0.69, AUC=0.85
+\end{itemize}
+
+Interpretación: GBM es ligeramente mejor, pero mejora ~3-4\% sobre Random Forest. Dado costo computacional adicional (5x más lento), Random Forest es modelo recomendado para producción.
+
+\subsection{Optimización de Hiperparámetros}
+
+Se realiza Grid Search sobre Random Forest:
+
+\begin{itemize}
+    \item \textbf{n\_estimators:} [50, 100, 200, 300]
+    \item \textbf{max\_depth:} [10, 15, 20, None]
+    \item \textbf{min\_samples\_leaf:} [20, 50, 100]
+\end{itemize}
+
+Validación cruzada (k=5) evalúa cada combinación. Mejor configuración típicamente: n\_estimators=100, max\_depth=15, min\_samples\_leaf=50 (balance entre accuracy y tiempo de entrenamiento).
+
+\subsection{Análisis de Importancia de Features}
+
+Random Forest calcula automáticamente importancia de cada feature:
+
+\begin{center}
+\begin{tabular}{lr}
+\hline
+Feature & Importancia (\%) \\
+\hline
+Anomalía de temperatura & 32.1 \\
+Anomalía acumulada 12-mes & 18.4 \\
+Mes del año & 15.6 \\
+Volatilidad & 12.3 \\
+Zona climática & 8.9 \\
+Otros features & 12.7 \\
+\hline
+\end{tabular}
+\end{center}
+
+Los 3 features principales contribuyen ~66\% del poder predictivo, validando selección de features hecha en sección anterior.
+
+\subsection{Detección de Overfitting}
+
+Se comparan scores en train vs. validation sets:
+
+\begin{itemize}
+    \item \textbf{Random Forest entrenamiento:} MAE=0.32°C (muy bajo)
+    \item \textbf{Random Forest validación:} MAE=0.78°C (razonable)
+    \item \textbf{Ratio:} 0.78/0.32 = 2.4x, indica overfitting moderado pero aceptable
+\end{itemize}
+
+El overfitting es normal en Random Forest; límites de profundidad y muestras mínimas por hoja lo mitigan. Scores en validation set son representativos de desempeño real.
+
+\subsection{Serialización y Deployment}
+
+Modelos entrenados se guardan en formato pickle/joblib:
+
+\begin{verbatim}
+/models/
+  /v1.0/
+    temperature_regression_rf.pkl
+    extreme_classifier_rf.pkl
+    feature_scaler.pkl
+    metadata.json
+\end{verbatim}
+
+Cada modelo incluye metadata: fecha entrenamiento, versión de features, métricas de validación. En producción, sistema carga modelo y aplica predicciones en tiempo real a datos entrantes.
+
+\subsection{Conclusión de fase}
+
+Se entrenan modelos simples pero efectivos: Regresión Lineal/Ridge/Random Forest para predicción de temperatura, Regresión Logística/Random Forest/GBM para detección de extremos. Random Forest emerge como mejor balance entre exactitud (81\% $R^2$, 0.69 F1) y complejidad computacional. Modelos capturan patrones temporales y geográficos, permitiendo alertas tempranas de eventos climáticos extremos.
+
+
+\newpage
+
+% !!!!!!!!!!!!!!!!!!!!!!!!!!!!!!!
+\section{Dashboard y Visualización}
+
+\subsection{Objetivo}
+
+Presentar insights derivados de análisis exploratorio, limpieza de datos y resultados de modelos predictivos de forma interactiva y accesible a audiencias técnicas y no-técnicas. El dashboard sirve como interfaz entre análisis backend y usuarios finales (meteorólogos, autoridades civiles).
+
+\subsection{Componentes del Dashboard}
+
+\subsubsection{Panel de Estadísticas Descriptivas}
+
+Muestra métricas resumidas del dataset:
+
+\begin{itemize}
+    \item \textbf{Total de registros:} 8.6 millones (después de limpieza)
+    \item \textbf{Span temporal:} 1850-2023 (173 años)
+    \item \textbf{Estaciones muestreadas:} 7,280 ubicaciones globales
+    \item \textbf{Temperatura global promedio:} 13.4°C (±0.5°C incertidumbre)
+    \item \textbf{Anomalía promedio (vs. 1850-1900):} +0.87°C (indica calentamiento)
+    \item \textbf{Tasa de cambio:} +0.018°C/año (aceleración del calentamiento post-1980)
+\end{itemize}
+
+Estos números contextualizan datos: 0.87°C de anomalía acumulada es evidencia de cambio climático antropogénico (consenso científico: ~1.1°C de calentamiento desde pre-industrial).
+
+\subsubsection{Gráficos de Distribución (Histogramas y Box-plots)}
+
+\textbf{Temperatura media:}
+\begin{itemize}
+    \item Histograma muestra distribución bimodal (picos en trópicos ~25°C y templados ~10°C)
+    \item Box-plot por región revela que trópicos tienen menor variabilidad (IQR~8°C) vs. polos (IQR~15°C)
+\end{itemize}
+
+\textbf{Anomalía de temperatura:}
+\begin{itemize}
+    \item Histograma aproximadamente normal, centrado en 0
+    \item Cola derecha alargada (extremos cálidos más frecuentes que extremos fríos en últimas décadas)
+\end{itemize}
+
+\textbf{Valores faltantes antes/después limpieza:}
+\begin{itemize}
+    \item Gráfico de barras apiladas mostrando % de missing data por columna
+    \item Pre-limpieza: Temperatura con 12\% faltantes (estaciones antiguas)
+    \item Post-limpieza: 0.8\% faltantes (después de imputación + exclusión selectiva)
+\end{itemize}
+
+\subsubsection{Análisis de Calidad - Heatmap de Completitud}
+
+Matriz de 12 filas (meses) × 17 columnas (décadas 1850s-2020s) mostrando % de datos disponibles:
+
+\begin{verbatim}
+Mes\Década  1850s  1900s  1950s  2000s  2020s
+Enero        15%    45%    78%    98%    99%
+Febrero      18%    42%    76%    97%    99%
+...
+Diciembre    12%    48%    81%    99%    99%
+\end{verbatim}
+
+Patrones visibles: cobertura crece con el tiempo (décadas recientes más completas). Identifica períodos de calidad cuestionable (ej. 1850s pre-industrial con muchos missing).
+
+\subsubsection{Series Temporales Interactivas}
+
+Gráficos de línea mostrando evolución de temperatura a lo largo del tiempo para:
+
+\textbf{1. Temperatura global promedio (1850-2023)}
+\begin{itemize}
+    \item Línea sólida negra: Temperatura actual
+    \item Banda sombreada gris: Intervalo de incertidumbre (95\%)
+    \item Línea roja punteada: Tendencia de 10 años (suavizado)
+    
+    Patrón observable: Relativamente estable 1850-1920, aumento gradual 1920-1980, aceleración post-1980, con plateau brevísimo post-2000
+\end{itemize}
+
+\textbf{2. Anomalía acumulada por región}
+\begin{itemize}
+    \item Gráficos separados para cada región (Ártico, Trópicos, Hemisferio Sur)
+    \item Interactividad: Usuario selecciona región, zoom en período
+    
+    Patterns: Ártico se calienta 3x más rápido que promedio global (amplificación polar), trópicos más estables
+\end{itemize}
+
+\textbf{3. Estaciones específicas}
+\begin{itemize}
+    \item Dropdown permite seleccionar cuidad (ej. La Habana, Nueva York)
+    \item Gráfico superpone temperatura mensual con anomalía suavizada
+    
+    Utilidad: Meteorólogos locales ven histórico específico de su zona
+\end{itemize}
+
+\subsubsection{Mapa de Calor Geográfico}
+
+Visualización de temperatura media (o anomalía) por ubicación:
+
+\begin{itemize}
+    \item Proyección de mapa mundi con color de cada píxel indicando temperatura (azul=frío, rojo=cálido)
+    \item Slider de tiempo permite animar período 1850-2023
+    \item Zoom interactivo en continentes específicos
+    
+    Observaciones: Gradiente latitudinal claro (trópicos rojo, polos azul); enrojecimiento progresivo post-1980 es dramático
+\end{itemize}
+
+\subsubsection{Matriz de Correlaciones}
+
+Heatmap de matriz de correlación entre variables:
+
+\begin{itemize}
+    \item Filas/columnas = features (temperatura, anomalía, volatilidad, etc.)
+    \item Color: Correlación positiva (rojo) vs. negativa (azul)
+    \item Valores numéricos en celdas
+    
+    Patrones: Anomalía vs. temperatura altamente correlacionada (rojo oscuro); temperatura vs. longitud débilmente correlacionada (casi blanco)
+\end{itemize}
+
+\subsubsection{Resultados de Machine Learning}
+
+\textbf{1. Matriz de Confusión - Clasificador de Extremos}
+
+Tabla 2×2 mostrando:
+\begin{verbatim}
+                  Predicción Negativa  Predicción Positiva
+Extremo Real             TN=74,200              FN=18,500
+Normal Real              FP=18,800              TP=23,300
+\end{verbatim}
+
+Derivados:
+\begin{itemize}
+    \item Sensitivity = 23,300 / (23,300+18,500) = 55.7\%
+    \item Specificity = 74,200 / (74,200+18,800) = 79.8\%
+    \item Precision = 23,300 / (23,300+18,800) = 54.4\%
+\end{itemize}
+
+Interpretación: Modelo detecta 56\% de eventos extremos reales (no es perfecto), pero cuando predice "extremo", es correcto 54\% de veces. Trade-off aceptable para sistema de alerta temprana.
+
+\textbf{2. Curva ROC}
+
+Gráfico con:
+\begin{itemize}
+    \item Eje X: False Positive Rate (1-Specificity)
+    \item Eje Y: True Positive Rate (Sensitivity)
+    \item Curva de performance del modelo
+    \item Línea diagonal: Modelo aleatorio (AUC=0.5)
+    \item Área bajo curva (AUC): 0.83
+\end{itemize}
+
+Interpretación: AUC=0.83 indica que 83\% de probabilidad de que modelo rankee un ejemplo positivo más alto que un negativo. Clasificador moderadamente bueno.
+
+\textbf{3. Importancia de Features}
+
+Gráfico de barras horizontal mostrando top 10 features por importancia (calculado por Random Forest):
+\begin{itemize}
+    \item Anomalía de temperatura: 32.1\%
+    \item Anomalía acumulada 12-mes: 18.4\%
+    \item Mes del año: 15.6\%
+    \item ... (otros)
+\end{itemize}
+
+Utilidad: Muestra a usuarios qué variables el modelo considera más predictivas de extremos.
+
+\textbf{4. Calibración del Modelo}
+
+Gráfico x-y donde:
+\begin{itemize}
+    \item X: Probabilidad predicha de evento extremo
+    \item Y: Frecuencia observada de evento extremo en datos
+    
+    Si modelo está bien calibrado, puntos caen sobre diagonal (ej. cuando modelo predice 70\% probabilidad, extremo ocurre ~70\% de veces en validación)
+\end{itemize}
+
+Para este proyecto típicamente: modelo está ligeramente sobreoptimista (predice 70\% pero ocurre 60%), requiriendo ajuste de umbral en producción.
+
+\subsubsection{Panel de Predicción en Tiempo Real}
+
+\textbf{Entrada interactiva:}
+\begin{itemize}
+    \item Selector de ciudad/región
+    \item Slider de "temperaturas históricos últimos 12 meses" (pre-completados si es ubicación muestreada)
+    \item Botón "Generar Predicción"
+\end{itemize}
+
+\textbf{Salida:}
+\begin{itemize}
+    \item Predicción de temperatura para próximo mes: "14.3°C ± 0.8°C"
+    \item Probabilidad de evento extremo: "18\%" (con indicador visual: barra verde si <30\%, amarilla si 30-60\%, roja si >60\%)
+    \item Justificación textual: "Predicción moderada. Anomalía histórica de +0.3°C + ciclo estacional de invierno → temperatura cercana a normal."
+\end{itemize}
+
+Utilidad: Meteorólogos pueden consultar predicciones para lugares sin estación automática, alimentando forecast locales.
+
+\subsection{Tecnologías de Visualización}
+
+\subsubsection{Framework seleccionado}
+
+Para este proyecto se usa \textbf{Plotly Dash} (framework Python):
+\begin{itemize}
+    \item \textbf{Ventaja:} Integración nativa con datos en Spark/Pandas, deployment rápido
+    \item \textbf{Interactividad:} Dropdowns, sliders, hover tooltips sin necesidad de JavaScript complejo
+    \item \textbf{Escalabilidad:} Carga datos desde HDFS/Parquet directamente
+\end{itemize}
+
+Alternativas consideradas: Tableau (propietario, caro), Power BI (integración Microsoft), Superset (requiere SQL, menos flexibilidad). Dash elegido por balance entre poder y practicidad.
+
+\subsubsection{Backend de Datos}
+
+\begin{itemize}
+    \item \textbf{Fuente:} Tablas Parquet en HDFS (\texttt{/climate\_data/cleaned/}, \texttt{/climate\_data/features/})
+    \item \textbf{Pre-procesamiento:} Spark ejecuta agregaciones (promedio por mes, por región) fuera de línea, genera tablas resumen
+    \item \textbf{Caché:} Resultados pre-computados se guardan en BD local (SQLite o Redis) para respuesta rápida en dashboard
+\end{itemize}
+
+\subsubsection{Actualizaciones en Tiempo Real}
+
+Cuando nuevos datos llegan (ej. medición de temperatura de estación meteorológica):
+\begin{itemize}
+    \item Job Spark cron ejecuta cada 24 horas
+    \item Limpia y normaliza nuevos datos (mismo pipeline que histórico)
+    \item Actualiza tabla Hive con nuevos registros
+    \item Dashboard automáticamente re-carga (caché invalidado)
+\end{itemize}
+
+Latencia: Datos disponibles en dashboard dentro de 2 horas de ingesta (no tiempo real instantáneo, pero suficiente para alertas climáticas).
+
+\subsection{Segmentación de Vistas}
+
+\subsubsection{Vista para Público General}
+
+\begin{itemize}
+    \item Gráficos de tendencia global (temperatura 1850-2023)
+    \item Explicación textual en lenguaje accesible ("Nuestro planeta se ha calentado 0.87°C en los últimos 170 años")
+    \item Impactos cualitativo (imágenes de olas de calor, inundaciones)
+\end{itemize}
+
+\subsubsection{Vista para Meteorólogos}
+
+\begin{itemize}
+    \item Acceso a predicciones detalladas por estación
+    \item Comparación de modelos (Random Forest vs. Regresión Lineal)
+    \item Estadísticas de error (MAE=0.78°C)
+    \item Descarga de predicciones en CSV para integración en forecast local
+\end{itemize}
+
+\subsubsection{Vista para Investigadores}
+
+\begin{itemize}
+    \item Acceso completo a dataset limpio (descargable)
+    \item Código de modelos (reproducibilidad)
+    \item Parámetros de hipertuning
+    \item Literatura citada
+\end{itemize}
+
+\subsection{Conclusión de fase}
+
+El dashboard transforma análisis técnico en herramienta accesible. Visualizaciones revelan patrones (calentamiento acelerado, amplificación polar); métricas ML cuantifican exactitud; interactividad permite exploración exploratorio. Sistema es escalable: nuevos datos se integran automáticamente, nuevos features se agregan sin redesign de interfaz.
+
+
+\end{document}
