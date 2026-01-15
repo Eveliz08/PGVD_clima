@@ -18,15 +18,18 @@ HDFS_PATH = "/clima"
 HDFS_NAMENODE_UI = "http://localhost:9870"  # URL de la interfaz web de HDFS
 
 def run_command(cmd, description):
-    """Ejecuta un comando y maneja errores."""
+    """Ejecuta un comando y devuelve (success, stdout_or_error)."""
     print(f"⏳ {description}...")
     try:
-        result = subprocess.run(cmd, shell=True, check=True, 
-                              capture_output=True, text=True)
+        result = subprocess.run(cmd, shell=True, check=True,
+                                capture_output=True, text=True)
+        stdout = result.stdout.strip() if result.stdout else ""
         print(f"✅ {description} completado.")
-        return True, None
+        if stdout:
+            print(f"   Salida: {stdout[:1000]}")
+        return True, stdout
     except subprocess.CalledProcessError as e:
-        error_msg = e.stderr.strip() if e.stderr else 'Sin mensaje de error'
+        error_msg = e.stderr.strip() if e.stderr else (e.stdout.strip() if e.stdout else 'Sin mensaje de error')
         print(f"❌ Error al {description.lower()}:")
         print(f"   Código de salida: {e.returncode}")
         print(f"   Error: {error_msg}")
@@ -48,16 +51,42 @@ def check_file_exists_in_hdfs(hdfs_path=HDFS_PATH, file_name=FILE_NAME):
         return False, f"El archivo no existe en HDFS: {full_path}"
 
 def check_kaggle_config():
-    """Verifica que la CLI de Kaggle esté configurada."""
+    """Verifica que la CLI de Kaggle esté configurada.
+    Comprueba en orden:
+      - KAGGLE_CONFIG_DIR (contenga kaggle.json)
+      - combinación KAGGLE_USERNAME + KAGGLE_API_TOKEN (o KAGGLE_KEY)
+      - ~/.kaggle/kaggle.json
+    """
+    # 1) Revisar variable de entorno KAGGLE_CONFIG_DIR
+    kaggle_env = os.getenv("KAGGLE_CONFIG_DIR")
+    if kaggle_env:
+        kaggle_path = Path(kaggle_env) / 'kaggle.json'
+        if kaggle_path.exists():
+            return True, f"Configuración de Kaggle encontrada en KAGGLE_CONFIG_DIR={kaggle_env}"
+        else:
+            return False, f"No se encontró kaggle.json en KAGGLE_CONFIG_DIR={kaggle_env}"
+
+    # 2) Revisar variables de entorno KAGGLE_USERNAME + KAGGLE_API_TOKEN (aceptamos token como key)
+    kaggle_user = os.getenv("KAGGLE_USERNAME")
+    kaggle_api_token = os.getenv("KAGGLE_API_TOKEN")
+    if kaggle_user and kaggle_api_token:
+        return True, "Configuración de Kaggle encontrada en variables de entorno (KAGGLE_USERNAME + KAGGLE_API_TOKEN)"
+
+    # 3) Revisar variable legacy KAGGLE_KEY
+    kaggle_key = os.getenv("KAGGLE_KEY")
+    if kaggle_user and kaggle_key:
+        return True, "Configuración de Kaggle encontrada en variables de entorno (KAGGLE_USERNAME + KAGGLE_KEY)"
+
+    # 4) Revisar ubicación por defecto en el HOME del proceso
     kaggle_path = Path.home() / '.kaggle' / 'kaggle.json'
-    if not kaggle_path.exists():
-        msg = ("No se encontró el archivo de configuración de Kaggle (~/.kaggle/kaggle.json). "
-               "Para configurar Kaggle: 1) Ve a https://www.kaggle.com/account, "
-               "2) Clic en 'Create New API Token' para descargar kaggle.json, "
-               "3) Colócalo en ~/.kaggle/kaggle.json, "
-               "4) Ejecuta: chmod 600 ~/.kaggle/kaggle.json")
-        return False, msg
-    return True, "Configuración de Kaggle encontrada"
+    if kaggle_path.exists():
+        return True, f"Configuración de Kaggle encontrada en {kaggle_path}"
+
+    msg = ("No se encontró el archivo de configuración de Kaggle (~/.kaggle/kaggle.json) ni variables de entorno KAGGLE_USERNAME/KAGGLE_API_TOKEN. "
+           "Para configurar Kaggle: 1) Ve a https://www.kaggle.com/account, 2) Clic en 'Create New API Token' para descargar kaggle.json, "
+           "3) Colócalo en ~/.kaggle/kaggle.json o móntalo como volumen en el servicio 'clima', "
+           "4) O exporta variables de entorno en docker-compose: KAGGLE_USERNAME y KAGGLE_API_TOKEN (o KAGGLE_KEY).")
+    return False, msg
 
 def check_dependencies():
     """Verifica que las herramientas necesarias estén instaladas."""
@@ -85,22 +114,36 @@ def extract_zip(zip_path, tmpdir):
     except Exception as e:
         return False, f"Error al extraer el archivo ZIP: {e}"
 
-def upload_to_hdfs(csv_path, hdfs_path, file_name):
-    """Sube un archivo a HDFS."""
+def upload_to_hdfs(csv_path, hdfs_path, file_name, block_size_bytes=134217728):
+    """Sube un archivo a HDFS usando un tamaño de bloque específico (por defecto 128 MiB)."""
     # Crear directorio en HDFS si no existe
     mkdir_cmd = f"hdfs dfs -mkdir -p {hdfs_path}"
-    success, error = run_command(mkdir_cmd, f"Creando directorio HDFS {hdfs_path}")
+    success, out = run_command(mkdir_cmd, f"Creando directorio HDFS {hdfs_path}")
     if not success:
-        return False, f"No se pudo crear el directorio HDFS. Verifica que el servicio esté activo. Error: {error}"
+        return False, f"No se pudo crear el directorio HDFS. Verifica que el servicio esté activo. Error: {out}"
     
-    # Subir archivo a HDFS
-    upload_cmd = f"hdfs dfs -put -f {csv_path} {hdfs_path}/{file_name}"
-    return run_command(upload_cmd, f"Subiendo {file_name} a HDFS")
+    # Subir archivo a HDFS forzando blocksize
+    # Usamos -Ddfs.blocksize=<bytes> para forzar block size en la operación de cliente
+    upload_cmd = f"hdfs dfs -Ddfs.blocksize={block_size_bytes} -put -f {csv_path} {hdfs_path}/{file_name}"
+    success, out = run_command(upload_cmd, f"Subiendo {file_name} a HDFS (blocksize={block_size_bytes} bytes)")
+    if not success:
+        return False, out
+    return True, out
 
 def verify_hdfs_upload(hdfs_path, file_name):
-    """Verifica que el archivo se haya subido correctamente a HDFS."""
-    verify_cmd = f"hdfs dfs -ls {hdfs_path}/{file_name}"
-    return run_command(verify_cmd, "Verificando archivo en HDFS")
+    """Verifica que el archivo se haya subido correctamente a HDFS y devuelve info de bloques."""
+    full_path = f"{hdfs_path}/{file_name}"
+    # Intentar obtener info detallada de bloques con fsck
+    fsck_cmd = f"hdfs fsck {full_path} -files -blocks -locations"
+    success, out = run_command(fsck_cmd, f"Ejecutando fsck para {full_path}")
+    if success:
+        return True, out
+    # Si fsck falla, intentar con ls como fallback
+    verify_cmd = f"hdfs dfs -ls {full_path}"
+    success2, out2 = run_command(verify_cmd, "Verificando archivo en HDFS (ls fallback)")
+    if success2:
+        return True, out2
+    return False, out or out2
 
 def download_and_upload_to_hdfs(force=False):
     """
@@ -121,7 +164,8 @@ def download_and_upload_to_hdfs(force=False):
         'success': False,
         'message': '',
         'hdfs_path': None,
-        'file_size_gb': None
+        'file_size_gb': None,
+        'fsck': None
     }
     
     print("=" * 60)
@@ -135,9 +179,12 @@ def download_and_upload_to_hdfs(force=False):
             result['success'] = True
             result['message'] = msg
             result['hdfs_path'] = f"{HDFS_PATH}/{FILE_NAME}"
+            # intentar obtener fsck info para el archivo ya existente
+            v_ok, v_out = verify_hdfs_upload(HDFS_PATH, FILE_NAME)
+            result['fsck'] = v_out
             print(f"ℹ️  {msg}")
             return result
-    
+
     # Verificar dependencias
     success, msg = check_dependencies()
     if not success:
@@ -176,13 +223,14 @@ def download_and_upload_to_hdfs(force=False):
             return result
         
         # 4. Verificar la subida
-        success, error = verify_hdfs_upload(HDFS_PATH, FILE_NAME)
+        success, out = verify_hdfs_upload(HDFS_PATH, FILE_NAME)
         if success:
             file_size_gb = os.path.getsize(csv_path) / (1024**3)
             result['success'] = True
             result['message'] = f"Dataset descargado y subido exitosamente a HDFS"
             result['hdfs_path'] = f"{HDFS_PATH}/{FILE_NAME}"
             result['file_size_gb'] = file_size_gb
+            result['fsck'] = out
             
             print("\n" + "=" * 60)
             print("🎉 PROCESO COMPLETADO EXITOSAMENTE")
@@ -192,8 +240,9 @@ def download_and_upload_to_hdfs(force=False):
             print(f"💾 Tamaño: {file_size_gb:.2f} GB")
         else:
             result['message'] = "No se pudo verificar la subida a HDFS."
-        
-        return result
+            result['fsck'] = out
+
+    return result
 
 def get_hdfs_ui_url():
     """Retorna la URL de la interfaz web de HDFS."""

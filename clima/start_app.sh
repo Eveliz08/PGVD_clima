@@ -65,6 +65,60 @@ wait_for_spark() {
     done
 }
 
+# Crear kaggle.json desde variables de entorno si están presentes
+create_kaggle_config() {
+    # Si ya existe KAGGLE_CONFIG_DIR con kaggle.json, no hacer nada
+    if [ -n "${KAGGLE_CONFIG_DIR}" ] && [ -f "${KAGGLE_CONFIG_DIR}/kaggle.json" ]; then
+        echo "ℹ️  kaggle.json ya existe en KAGGLE_CONFIG_DIR=${KAGGLE_CONFIG_DIR}"
+        return
+    fi
+
+    # Usar HOME por defecto si no hay KAGGLE_CONFIG_DIR
+    KAGGLE_DIR="${KAGGLE_CONFIG_DIR:-$HOME/.kaggle}"
+    mkdir -p "${KAGGLE_DIR}"
+    KAGGLE_FILE="${KAGGLE_DIR}/kaggle.json"
+
+    # Si ya existe el archivo, informar y salir
+    if [ -f "${KAGGLE_FILE}" ]; then
+        echo "ℹ️  kaggle.json ya existe en ${KAGGLE_FILE}"
+        export KAGGLE_CONFIG_DIR="${KAGGLE_DIR}"
+        return
+    fi
+
+    # 1) Si el archivo kaggle.json fue montado por volumen (por ejemplo ./kaggle.json:/root/.kaggle/kaggle.json),
+    #    el archivo ya estará presente y el bloque anterior lo detectará.
+
+    # 2) Crear desde variables de entorno:
+    #    - preferencia: KAGGLE_USERNAME + KAGGLE_API_TOKEN (token generado por Kaggle)
+    if [ -n "${KAGGLE_USERNAME}" ] && [ -n "${KAGGLE_API_TOKEN}" ]; then
+        echo "🔐 Creando kaggle.json desde KAGGLE_USERNAME + KAGGLE_API_TOKEN..."
+        cat > "${KAGGLE_FILE}" <<EOF
+{"username":"${KAGGLE_USERNAME}","key":"${KAGGLE_API_TOKEN}"}
+EOF
+        chmod 600 "${KAGGLE_FILE}"
+        export KAGGLE_CONFIG_DIR="${KAGGLE_DIR}"
+        echo "✅ kaggle.json creado en ${KAGGLE_FILE} y KAGGLE_CONFIG_DIR exportado"
+        return
+    fi
+
+    # 3) Crear desde KAGGLE_USERNAME + KAGGLE_KEY (legacy)
+    if [ -n "${KAGGLE_USERNAME}" ] && [ -n "${KAGGLE_KEY}" ]; then
+        echo "🔐 Creando kaggle.json desde KAGGLE_USERNAME + KAGGLE_KEY..."
+        cat > "${KAGGLE_FILE}" <<EOF
+{"username":"${KAGGLE_USERNAME}","key":"${KAGGLE_KEY}"}
+EOF
+        chmod 600 "${KAGGLE_FILE}"
+        export KAGGLE_CONFIG_DIR="${KAGGLE_DIR}"
+        echo "✅ kaggle.json creado en ${KAGGLE_FILE} y KAGGLE_CONFIG_DIR exportado"
+        return
+    fi
+
+    echo "ℹ️  No se proporcionaron credenciales de Kaggle en variables de entorno ni se montó kaggle.json."
+}
+
+# Llamar a la función para crear/configurar kaggle.json si procede
+create_kaggle_config
+
 # Esperar a los servicios si está habilitado
 if [ "${WAIT_FOR_HDFS}" = "true" ]; then
     wait_for_namenode
@@ -77,10 +131,14 @@ echo "  INICIANDO STREAMLIT"
 echo "=========================================="
 echo ""
 
+# Ajustar límite de subida de Streamlit a 1GB (1024 MB)
+export STREAMLIT_SERVER_MAX_UPLOAD_SIZE=1024
+
 # Iniciar Streamlit
 cd /app
 exec streamlit run src/dashboard/app.py \
     --server.port=8501 \
     --server.address=0.0.0.0 \
     --server.headless=true \
-    --browser.gatherUsageStats=false
+    --browser.gatherUsageStats=false \
+    --server.maxUploadSize=1024

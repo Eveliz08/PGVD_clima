@@ -259,3 +259,8 @@ Las configuraciones disponibles son:
 * /etc/hadoop/mapred-site.xml  MAPRED_CONF
 
 Si necesitas extender algún otro archivo de configuración, consulta el script bash base/entrypoint.sh.
+
+
+docker-compose build clima  
+docker-compose up -d  
+docker-compose logs -f clima

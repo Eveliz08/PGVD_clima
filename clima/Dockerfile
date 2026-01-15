@@ -7,7 +7,8 @@ LABEL maintainer="clima" \
 
 # Variables de entorno
 ENV PYTHONUNBUFFERED=1 \
-    PYTHONDONTWRITEBYTECODE=1
+    PYTHONDONTWRITEBYTECODE=1 \
+    STREAMLIT_SERVER_MAX_UPLOAD_SIZE=1024
 
 # 1. Instalar dependencias del sistema necesarias
 RUN apt-get update && apt-get install -y --no-install-recommends \

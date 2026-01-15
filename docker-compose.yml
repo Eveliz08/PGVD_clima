@@ -139,21 +139,24 @@ services:
     container_name: clima
     restart: on-failure
     depends_on:
-      spark-master:
-        condition: service_started
-      namenode:
-        condition: service_started
-      datanode:
-        condition: service_started
+      - spark-master
+      - namenode
+      - datanode
     environment:
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
       - SPARK_MASTER=spark://spark-master:7077
       - HDFS_NAMENODE_UI=http://namenode:9870
-      - HADOOP_USER_NAME=root
+      - WAIT_FOR_HDFS=true
+      - KAGGLE_CONFIG_DIR=/root/.kaggle
+      - KAGGLE_API_TOKEN=KGAT_0aaec0d4ffb7f660a44ec781b1599768
+      - KAGGLE_USERNAME=evelizespinaco
     ports:
       - "8501:8501"
     volumes:
       - ./clima/data:/app/data
+      - ./kaggle.json:/root/.kaggle/kaggle.json:ro
+    networks:
+      - default
 
 volumes:
   hadoop_namenode:

@@ -23,6 +23,8 @@ import seaborn as sns
 import pandas as pd
 import numpy as np
 import logging
+from functools import reduce
+import operator
 
 logger = logging.getLogger(__name__)
 
@@ -53,10 +55,10 @@ class PreEDAAnalyzer:
     def missing_stats_by_row(self, df):
         """Estadísticas de valores faltantes por fila."""
         total_cols = len(df.columns)
-        df_with_nulls = df.withColumn(
-            'null_count',
-            spark_sum(when(isnull(col(c)), 1).otherwise(0) for c in df.columns)
-        )
+        # construir expresión para contar nulos por fila
+        null_exprs = [when(isnull(col(c)), 1).otherwise(0) for c in df.columns]
+        null_count_expr = reduce(operator.add, null_exprs)
+        df_with_nulls = df.withColumn('null_count', null_count_expr)
         df_with_nulls = df_with_nulls.withColumn(
             'null_percentage',
             spark_round(100 * col('null_count') / total_cols, 2)
@@ -112,26 +114,32 @@ class PreEDAAnalyzer:
         logger.info("Outliers detectados (IQR):\n" + str(outlier_summary))
         return outlier_summary
     
-    def plot_missing_by_column(self, stats_df, output_path):
-        """Gráfico de pastel de valores faltantes por columna."""
+    def plot_missing_by_column(self, stats_df, output_path=None):
+        """Gráfico de barras y pastel de valores faltantes por columna. Devuelve figura."""
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         
         # Gráfico de barras
-        stats_df.plot(x='Columna', y='Valores_Faltantes', kind='bar', ax=axes[0])
+        stats_df.plot(x='Columna', y='Valores_Faltantes', kind='bar', ax=axes[0], color='skyblue')
         axes[0].set_title('Valores Faltantes por Columna')
         axes[0].set_ylabel('Cantidad')
         
-        # Gráfico de pastel
+        # Gráfico de pastel (solo columnas con >0)
         with_missing = stats_df[stats_df['Valores_Faltantes'] > 0]
-        axes[1].pie(with_missing['Valores_Faltantes'], labels=with_missing['Columna'], autopct='%1.1f%%')
-        axes[1].set_title('Distribución de Valores Faltantes')
+        if not with_missing.empty:
+            axes[1].pie(with_missing['Valores_Faltantes'], labels=with_missing['Columna'], autopct='%1.1f%%')
+            axes[1].set_title('Distribución de Valores Faltantes')
+        else:
+            axes[1].text(0.5, 0.5, 'No missing values', ha='center', va='center')
+            axes[1].set_title('Distribución de Valores Faltantes')
         
         plt.tight_layout()
-        plt.savefig(output_path + '/missing_by_column.png')
-        logger.info(f"Gráfico guardado: {output_path}/missing_by_column.png")
-    
-    def plot_missing_by_row_distribution(self, df_with_nulls, output_path):
-        """Distribución de filas por porcentaje de valores faltantes."""
+        if output_path:
+            plt.savefig(output_path + '/missing_by_column.png')
+            logger.info(f"Gráfico guardado: {output_path}/missing_by_column.png")
+        return fig
+
+    def plot_missing_by_row_distribution(self, df_with_nulls, output_path=None):
+        """Distribución de filas por porcentaje de valores faltantes. Devuelve figura."""
         df_pandas = df_with_nulls.select('null_percentage').toPandas()
         
         fig, ax = plt.subplots(figsize=(10, 6))
@@ -142,62 +150,85 @@ class PreEDAAnalyzer:
         ax.set_title('Distribución de Filas por % de Valores Faltantes')
         
         plt.tight_layout()
-        plt.savefig(output_path + '/missing_by_row_distribution.png')
-        logger.info(f"Gráfico guardado: {output_path}/missing_by_row_distribution.png")
-    
-    def plot_numeric_distributions(self, df, numeric_cols, output_path):
-        """Histogramas y boxplots de variables numéricas."""
-        df_pandas = df.select(numeric_cols).toPandas()
+        if output_path:
+            plt.savefig(output_path + '/missing_by_row_distribution.png')
+            logger.info(f"Gráfico guardado: {output_path}/missing_by_row_distribution.png")
+        return fig
+
+    def plot_numeric_distributions(self, df, numeric_cols, output_path=None, sample_fraction=0.1):
+        """Histogramas y boxplots de variables numéricas. Devuelve lista de figuras."""
+        plots = []
+        # sample para rendimiento
+        df_sample = df.select(numeric_cols).sample(False, sample_fraction).toPandas()
+        # Histograma combinado (una figura por variable)
+        for col_name in numeric_cols:
+            fig, ax = plt.subplots(figsize=(8, 4))
+            df_sample[col_name].dropna().hist(bins=50, ax=ax, color='lightgreen', edgecolor='black')
+            ax.set_title(f'Histograma: {col_name}')
+            ax.set_xlabel('Valor')
+            ax.set_ylabel('Frecuencia')
+            plt.tight_layout()
+            if output_path:
+                plt.savefig(f"{output_path}/hist_{col_name}.png")
+                logger.info(f"Histograma guardado: {output_path}/hist_{col_name}.png")
+            plots.append(fig)
+            
+            fig2, ax2 = plt.subplots(figsize=(6, 4))
+            sns.boxplot(data=df_sample, y=col_name, ax=ax2, color='lightcoral')
+            ax2.set_title(f'Boxplot: {col_name}')
+            ax2.set_ylabel('Valor')
+            plt.tight_layout()
+            if output_path:
+                plt.savefig(f"{output_path}/box_{col_name}.png")
+                logger.info(f"Boxplot guardado: {output_path}/box_{col_name}.png")
+            plots.append(fig2)
         
-        # Histogramas
-        fig, axes = plt.subplots(len(numeric_cols), 1, figsize=(10, 3*len(numeric_cols)))
-        if len(numeric_cols) == 1:
-            axes = [axes]
-        
-        for idx, col_name in enumerate(numeric_cols):
-            df_pandas[col_name].hist(bins=30, ax=axes[idx], edgecolor='black')
-            axes[idx].set_title(f'Histograma: {col_name}')
-            axes[idx].set_xlabel('Valor')
-            axes[idx].set_ylabel('Frecuencia')
-        
-        plt.tight_layout()
-        plt.savefig(output_path + '/histograms.png')
-        logger.info(f"Histogramas guardados: {output_path}/histograms.png")
-        
-        # Boxplots
-        fig, axes = plt.subplots(1, len(numeric_cols), figsize=(5*len(numeric_cols), 5))
-        if len(numeric_cols) == 1:
-            axes = [axes]
-        
-        for idx, col_name in enumerate(numeric_cols):
-            axes[idx].boxplot(df_pandas[col_name].dropna())
-            axes[idx].set_title(f'Boxplot: {col_name}')
-            axes[idx].set_ylabel('Valor')
-        
-        plt.tight_layout()
-        plt.savefig(output_path + '/boxplots.png')
-        logger.info(f"Boxplots guardados: {output_path}/boxplots.png")
-    
-    def analyze(self, hdfs_input_path, numeric_cols, output_dir=None):
-        """Ejecuta análisis completo."""
+        return plots
+
+    def analyze(self, hdfs_input_path, numeric_cols=None, output_dir=None):
+        """Ejecuta análisis completo y devuelve (stats_df, plots)."""
         output_dir = output_dir or self.output_dir
         df = self.spark.read.csv(hdfs_input_path, header=True, inferSchema=True)
         logger.info(f"Datos cargados desde HDFS: {hdfs_input_path}")
         
+        # detectar columnas numéricas si no se pasaron
+        if numeric_cols is None:
+            numeric_cols = [c for c, t in df.dtypes if t in ['int', 'bigint', 'double', 'float']]
+
         # Estadísticas
-        stats_col = self.missing_stats_by_column(df)
+        stats_col = self.missing_stats_by_column(df)  # pandas DF with Columna, Valores_Faltantes, Porcentaje
         df_with_nulls = self.missing_stats_by_row(df)
-        numeric_stats = self.numeric_stats(df, numeric_cols)
-        outliers = self.detect_outliers_iqr(df, numeric_cols)
+        numeric_stats = self.numeric_stats(df, numeric_cols)  # dict per col
+        outliers = self.detect_outliers_iqr(df, numeric_cols)  # dict per col
         
-        # Visualizaciones
-        self.plot_missing_by_column(stats_col, output_dir)
-        self.plot_missing_by_row_distribution(df_with_nulls, output_dir)
-        self.plot_numeric_distributions(df, numeric_cols, output_dir)
+        # Construir tabla final por variable: missing, outliers, min, max
+        rows = []
+        total_rows = df.count()
+        for col_name in numeric_cols:
+            missing_count = int(stats_col.loc[stats_col['Columna'] == col_name, 'Valores_Faltantes'].values[0]) if col_name in stats_col['Columna'].values else 0
+            outlier_count = int(outliers.get(col_name, {}).get('count', 0))
+            min_val = numeric_stats.get(col_name, {}).get('min')
+            max_val = numeric_stats.get(col_name, {}).get('max')
+            rows.append({
+                'variable': col_name,
+                'missing': missing_count,
+                'outliers': outlier_count,
+                'min': min_val,
+                'max': max_val
+            })
+        stats_df = pd.DataFrame(rows)
         
-        logger.info(f"Análisis completado. Reportes guardados en: {output_dir}")
-        return {
-            'missing_by_column': stats_col,
-            'numeric_stats': numeric_stats,
-            'outliers': outliers
-        }
+        # Visualizaciones: devolver Figuras en una lista
+        plots = []
+        # missing by column figure
+        fig_missing_col = self.plot_missing_by_column(stats_col, output_dir)
+        plots.append(fig_missing_col)
+        # missing by row distribution
+        fig_missing_row = self.plot_missing_by_row_distribution(df_with_nulls, output_dir)
+        plots.append(fig_missing_row)
+        # numeric distributions (histograms + boxplots)
+        numeric_plots = self.plot_numeric_distributions(df, numeric_cols, output_dir)
+        plots.extend(numeric_plots)
+        
+        logger.info(f"Análisis completado. Reportes generados en: {output_dir}")
+        return stats_df, plots
