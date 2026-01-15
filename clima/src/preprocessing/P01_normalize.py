@@ -53,15 +53,13 @@ class DataNormalizer:
         logger.info(f"Normalización de números completada para columnas: {numeric_columns}")
         return df
     
-    def normalize(self, hdfs_input_path, hdfs_output_path, date_cols, numeric_cols):
-        """Ejecuta la normalización completa."""
-        df = self.spark.read.csv(hdfs_input_path, header=True, inferSchema=True)
-        logger.info(f"Datos cargados desde HDFS: {hdfs_input_path}")
+    def normalize(self, df_spark):
+        """Ejecuta la normalización completa detectando tipos automáticamente."""
+        # Detectar columnas de fechas y números automáticamente
+        date_cols = [field.name for field in df_spark.schema.fields if "date" in field.name.lower()]
+        numeric_cols = [field.name for field in df_spark.schema.fields if field.dataType.simpleString() in ["double", "integer", "long", "float"]]
         
-        df = self.normalize_dates(df, date_cols)
+        df = self.normalize_dates(df_spark, date_cols)
         df = self.normalize_numbers(df, numeric_cols)
-        
-        df.write.mode("overwrite").csv(hdfs_output_path, header=True)
-        logger.info(f"Datos normalizados guardados en HDFS: {hdfs_output_path}")
-        
+          
         return df

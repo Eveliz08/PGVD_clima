@@ -46,7 +46,6 @@ def show():
         if exists:
             st.success(f"✅ {msg}")
             st.info(f"📁 Ruta HDFS: `{HDFS_PATH}/{FILE_NAME}`")
-            loand = 1
         
         
         st.markdown("---")
@@ -73,9 +72,6 @@ def show():
                     with st.expander("Salida de verificación (fsck / fallback)"):
                         st.code(resultado.get('fsck'))
         
-        st.markdown("---")
-        st.markdown("### 📋 Se requiere conexión a internet para descargar el dataset")
-        st.markdown( "---")
     
     with tab2:
         st.subheader("Cargar Archivo Local a HDFS")
@@ -105,7 +101,7 @@ def show():
                 with open(temp_path, "wb") as f:
                     f.write(uploaded_file.getbuffer())
                     
-                success, out = upload_to_hdfs(temp_path, HDFS_PATH, custom_filename)
+                success, out = upload_to_hdfs(temp_path, HDFS_PATH, uploaded_file.name)
                 
                 if success:
                     st.success(f"✅ Archivo subido a HDFS en {HDFS_PATH}/{custom_filename}")
@@ -118,37 +114,27 @@ def show():
 
 
     if loand:
-            df = pd.read_csv(uploaded_file)
-            st.session_state.df = df
+        df = pd.read_csv(uploaded_file)
+        st.session_state.df = df
             
-            col1, col2, col3 = st.columns(3)
-            with col1:
-                st.metric("Filas", df.shape[0])
-            with col2:
-                st.metric("Columnas", df.shape[1])
-            with col3:
-                st.metric("Tipos de datos", len(df.dtypes.unique()))
             
-            st.success("✅ Archivo cargado correctamente")
-            
-            st.subheader("Vista previa del dataset")
-            st.dataframe(df.head(50), use_container_width=True)
+        st.subheader("Vista previa del dataset")
         
-            # Mostrar información del dataset si está cargado en sesión
-            if "df" in st.session_state:
-                st.markdown("---")
-                st.subheader("📋 Información del Dataset Cargado")
+        # Mostrar información del dataset si está cargado en sesión
+        if "df" in st.session_state:
+            st.markdown("---")
+            st.subheader("📋 Información del Dataset Cargado")
                 
-                col1, col2, col3 = st.columns(3)
+            col1, col2, col3 = st.columns(3)
                 
-                with col1:
-                    st.metric("Filas", st.session_state.df.shape[0])
-                with col2:
-                    st.metric("Columnas", st.session_state.df.shape[1])
-                with col3:
-                    st.metric("Tipos de datos", len(st.session_state.df.dtypes.unique()))
+            with col1:
+                st.metric("Filas", st.session_state.df.shape[0])
+            with col2:
+                st.metric("Columnas", st.session_state.df.shape[1])
+            with col3:
+                st.metric("Tipos de datos", len(st.session_state.df.dtypes.unique()))
                 
-                st.subheader("Vista previa del dataset")
-                st.dataframe(st.session_state.df.head(50), use_container_width=True)
-            loand = 0
+            st.subheader("Vista previa del dataset")
+            st.dataframe(st.session_state.df.head(50), use_container_width=True)
+        loand = 0
 

@@ -1,5 +1,16 @@
 import streamlit as st
 import pandas as pd
+from pyspark.sql import SparkSession
+import os
+import sys
+
+sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
+# IMPORTACIONES A MODO ABSOLUTO (antes había imports relativos que provocaban el error)
+from tools.download_data import check_file_exists_in_hdfs
+from preprocessing.P01_normalize import DataNormalizer
+from preprocessing.P02_preEDA import PreEDAAnalyzer
+from preprocessing.P03_clean import DataCleaner
+from preprocessing.P04_imputer import KNNImputer
 
 def show():
     """Página para limpiar y procesar el dataset."""
@@ -23,8 +34,6 @@ def show():
             try:
                 df_spark = spark.read.csv("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv", header=True, inferSchema=True)
                 st.session_state.df_spark = df_spark
-                st.session_state.df = df_spark.limit(1000).toPandas()  # Sample para display
-                st.success("✅ Datos cargados desde HDFS")
             except Exception as e:
                 st.error(f"❌ Error cargando datos: {e}")
                 return
@@ -35,10 +44,18 @@ def show():
     if 'normalized' not in st.session_state:
         with st.spinner("Aplicando normalización..."):
             try:
-                df_spark = normalize(df_spark)
+                normalizer = DataNormalizer(df_spark)
+                df_spark = normalizer.normalize()
+                
+                # Actualizar datos en HDFS
+                df_spark.write.mode("overwrite").csv(
+                    "hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv",
+                    header=True
+                )
+                
                 st.session_state.df_spark = df_spark
-                st.session_state.df = df_spark.limit(1000).toPandas()
                 st.session_state.normalized = True
+                st.success("✅ Normalización aplicada y datos actualizados en HDFS")
             except Exception as e:
                 st.error(f"❌ Error en normalización: {e}")
                 return
@@ -47,13 +64,13 @@ def show():
     analyzer = PreEDAAnalyzer(spark)
     if 'preEDA_stats' not in st.session_state:
         with st.spinner("Ejecutando preEDA..."):
-            try:
-                stats_df, plots = analyzer.analyze("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv")
-                st.session_state.preEDA_stats = stats_df
-                st.session_state.preEDA_plots = plots
-            except Exception as e:
-                st.error(f"❌ Error en preEDA: {e}")
-                return
+            # try:
+            stats_df, plots = analyzer.analyze("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv")
+            st.session_state.preEDA_stats = stats_df
+            st.session_state.preEDA_plots = plots
+            # except Exception as e:
+            #     st.error(f"❌ Error en preEDA: {e}")
+            #     return
     
     stats_df = st.session_state.preEDA_stats
     
@@ -67,11 +84,10 @@ def show():
     if st.button("🧹 Limpiar Dataset"):
         with st.spinner("Aplicando limpieza y imputación..."):
             try:
-                df_spark = clean(df_spark)
-                df_spark = imputer(df_spark)
+                df_spark = DataCleaner(df_spark).clean()
+                df_spark = KNNImputer(df_spark).impute()
                 st.session_state.df_spark = df_spark
-                st.session_state.df = df_spark.limit(1000).toPandas()
-                st.success("✅ Limpieza y imputación aplicadas")
+                st.success("✅ Limpieza e imputación aplicadas")
                 # Recalcular preEDA usando el analizador sobre la ruta en HDFS
                 stats_df, plots = analyzer.analyze("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv")
                 st.session_state.preEDA_stats = stats_df

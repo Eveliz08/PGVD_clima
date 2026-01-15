@@ -31,9 +31,8 @@ logger = logging.getLogger(__name__)
 class PreEDAAnalyzer:
     """Análisis exploratorio inicial de datos."""
     
-    def __init__(self, spark: SparkSession, output_dir="hdfs:///preprocessing/reports"):
+    def __init__(self, spark: SparkSession):
         self.spark = spark
-        self.output_dir = output_dir
         
     def missing_stats_by_column(self, df):
         """Estadísticas de valores faltantes por columna."""
@@ -114,7 +113,7 @@ class PreEDAAnalyzer:
         logger.info("Outliers detectados (IQR):\n" + str(outlier_summary))
         return outlier_summary
     
-    def plot_missing_by_column(self, stats_df, output_path=None):
+    def plot_missing_by_column(self, stats_df):
         """Gráfico de barras y pastel de valores faltantes por columna. Devuelve figura."""
         fig, axes = plt.subplots(1, 2, figsize=(14, 5))
         
@@ -133,12 +132,10 @@ class PreEDAAnalyzer:
             axes[1].set_title('Distribución de Valores Faltantes')
         
         plt.tight_layout()
-        if output_path:
-            plt.savefig(output_path + '/missing_by_column.png')
-            logger.info(f"Gráfico guardado: {output_path}/missing_by_column.png")
+        # No guardar en disco, devolver figura
         return fig
 
-    def plot_missing_by_row_distribution(self, df_with_nulls, output_path=None):
+    def plot_missing_by_row_distribution(self, df_with_nulls):
         """Distribución de filas por porcentaje de valores faltantes. Devuelve figura."""
         df_pandas = df_with_nulls.select('null_percentage').toPandas()
         
@@ -150,12 +147,10 @@ class PreEDAAnalyzer:
         ax.set_title('Distribución de Filas por % de Valores Faltantes')
         
         plt.tight_layout()
-        if output_path:
-            plt.savefig(output_path + '/missing_by_row_distribution.png')
-            logger.info(f"Gráfico guardado: {output_path}/missing_by_row_distribution.png")
+        # No guardar en disco, devolver figura
         return fig
 
-    def plot_numeric_distributions(self, df, numeric_cols, output_path=None, sample_fraction=0.1):
+    def plot_numeric_distributions(self, df, numeric_cols, sample_fraction=0.1):
         """Histogramas y boxplots de variables numéricas. Devuelve lista de figuras."""
         plots = []
         # sample para rendimiento
@@ -168,9 +163,7 @@ class PreEDAAnalyzer:
             ax.set_xlabel('Valor')
             ax.set_ylabel('Frecuencia')
             plt.tight_layout()
-            if output_path:
-                plt.savefig(f"{output_path}/hist_{col_name}.png")
-                logger.info(f"Histograma guardado: {output_path}/hist_{col_name}.png")
+            # No guardar en disco, devolver figura
             plots.append(fig)
             
             fig2, ax2 = plt.subplots(figsize=(6, 4))
@@ -178,16 +171,13 @@ class PreEDAAnalyzer:
             ax2.set_title(f'Boxplot: {col_name}')
             ax2.set_ylabel('Valor')
             plt.tight_layout()
-            if output_path:
-                plt.savefig(f"{output_path}/box_{col_name}.png")
-                logger.info(f"Boxplot guardado: {output_path}/box_{col_name}.png")
+            # No guardar en disco, devolver figura
             plots.append(fig2)
         
         return plots
 
-    def analyze(self, hdfs_input_path, numeric_cols=None, output_dir=None):
+    def analyze(self, hdfs_input_path, numeric_cols=None):
         """Ejecuta análisis completo y devuelve (stats_df, plots)."""
-        output_dir = output_dir or self.output_dir
         df = self.spark.read.csv(hdfs_input_path, header=True, inferSchema=True)
         logger.info(f"Datos cargados desde HDFS: {hdfs_input_path}")
         
@@ -203,7 +193,6 @@ class PreEDAAnalyzer:
         
         # Construir tabla final por variable: missing, outliers, min, max
         rows = []
-        total_rows = df.count()
         for col_name in numeric_cols:
             missing_count = int(stats_col.loc[stats_col['Columna'] == col_name, 'Valores_Faltantes'].values[0]) if col_name in stats_col['Columna'].values else 0
             outlier_count = int(outliers.get(col_name, {}).get('count', 0))
@@ -218,17 +207,17 @@ class PreEDAAnalyzer:
             })
         stats_df = pd.DataFrame(rows)
         
-        # Visualizaciones: devolver Figuras en una lista
+        # Visualizaciones: devolver Figuras en una lista (NO GUARDAR EN DISCO)
         plots = []
         # missing by column figure
-        fig_missing_col = self.plot_missing_by_column(stats_col, output_dir)
+        fig_missing_col = self.plot_missing_by_column(stats_col)
         plots.append(fig_missing_col)
         # missing by row distribution
-        fig_missing_row = self.plot_missing_by_row_distribution(df_with_nulls, output_dir)
+        fig_missing_row = self.plot_missing_by_row_distribution(df_with_nulls)
         plots.append(fig_missing_row)
         # numeric distributions (histograms + boxplots)
-        numeric_plots = self.plot_numeric_distributions(df, numeric_cols, output_dir)
+        numeric_plots = self.plot_numeric_distributions(df, numeric_cols)
         plots.extend(numeric_plots)
         
-        logger.info(f"Análisis completado. Reportes generados en: {output_dir}")
+        logger.info("Análisis completado (figuras en memoria).")
         return stats_df, plots

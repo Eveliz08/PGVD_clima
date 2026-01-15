@@ -3,13 +3,11 @@ from streamlit_option_menu import option_menu
 import sys
 import os
 
-# Configuración de la página
-st.set_page_config(
-    page_title="Dashboard Clima",
-    page_icon="🌦️",
-    layout="wide",
-    initial_sidebar_state="expanded"
-)
+# AÑADIDO: asegurar que el directorio 'src' del proyecto esté en sys.path
+# app.py está en /app/src/dashboard -> subimos un nivel para apuntar a /app/src
+SRC_DIR = os.path.abspath(os.path.dirname(__file__))
+if SRC_DIR not in sys.path:
+    sys.path.insert(0, SRC_DIR)
 
 # Importar páginas
 from pages import (
@@ -20,6 +18,15 @@ from pages import (
     page_04_predicciones,
     page_05_visualizaciones
 )
+
+# Configuración de la página
+st.set_page_config(
+    page_title="Dashboard Clima",
+    page_icon="🌦️",
+    layout="wide",
+    initial_sidebar_state="expanded"
+)
+
 
 # Estilos CSS personalizados
 st.markdown("""

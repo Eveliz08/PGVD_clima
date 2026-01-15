@@ -261,6 +261,7 @@ Las configuraciones disponibles son:
 Si necesitas extender algún otro archivo de configuración, consulta el script bash base/entrypoint.sh.
 
 
+sudo systemctl start docker
 docker-compose build clima  
 docker-compose up -d  
 docker-compose logs -f clima
