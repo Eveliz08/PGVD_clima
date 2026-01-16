@@ -20,7 +20,7 @@ from download_data import (
     upload_to_hdfs
 )
 
-def show():
+def show(spark=None):
     """Página para cargar y visualizar datasets."""
     
     st.title("📤 Cargar Dataset")

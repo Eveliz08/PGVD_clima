@@ -265,3 +265,5 @@ sudo systemctl start docker
 docker-compose build clima  
 docker-compose up -d  
 docker-compose logs -f clima
+
+docker-compose down

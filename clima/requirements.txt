@@ -5,7 +5,7 @@ scipy
 scikit-learn
 matplotlib
 seaborn
-pyspark
+pyspark == 3.5.0
 kaggle
 streamlit
 streamlit-option-menu

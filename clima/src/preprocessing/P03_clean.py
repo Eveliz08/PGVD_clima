@@ -10,6 +10,8 @@ from pyspark.sql.functions import (
     sum as spark_sum, round as spark_round, lit
 )
 import logging
+from functools import reduce
+import operator
 
 logger = logging.getLogger(__name__)
 
@@ -57,16 +59,17 @@ class DataCleaner:
         """Elimina filas con más del threshold% de valores NULL."""
         total_cols = len(df.columns)
         
-        # Contar valores nulos por fila
-        df_with_null_count = df.withColumn(
-            '__null_count__',
-            spark_sum(when(isnull(col(c)), 1).otherwise(0) for c in df.columns)
-        )
+        # construir expresión para contar nulos por fila (sumar 1/0 por cada columna)
+        null_exprs = [when(isnull(col(c)), 1).otherwise(0) for c in df.columns]
+        # combinar las expresiones sumándolas para obtener el contador por fila
+        null_count_expr = reduce(operator.add, null_exprs) if null_exprs else lit(0)
+        
+        df_with_null_count = df.withColumn('__null_count__', null_count_expr)
         
         # Contar valores nulos permitidos
         max_nulls = int(total_cols * null_threshold)
         
-        # Filtrar filas
+        # Filtrar filas (mantener las que tienen <= max_nulls nulos)
         df_cleaned = df_with_null_count.filter(col('__null_count__') <= max_nulls).drop('__null_count__')
         
         removed_rows = df.count() - df_cleaned.count()
@@ -74,23 +77,16 @@ class DataCleaner:
         
         return df_cleaned
     
-    def clean(self, hdfs_input_path, hdfs_output_path, numeric_cols, null_threshold=0.5):
+    def clean(self, df, null_threshold=0.5):
         """Ejecuta limpieza completa."""
-        df = self.spark.read.csv(hdfs_input_path, header=True, inferSchema=True)
-        logger.info(f"Datos cargados desde HDFS: {hdfs_input_path}")
         
         initial_count = df.count()
         
-        # Paso 1: Reemplazar outliers con NULL
-        df = self.replace_outliers_with_null(df, numeric_cols)
         
         # Paso 2: Eliminar filas con muchos nulos
         df = self.remove_rows_with_excessive_nulls(df, null_threshold)
         
         final_count = df.count()
         logger.info(f"Limpieza completada: {initial_count} -> {final_count} filas ({final_count - initial_count} eliminadas)")
-        
-        df.write.mode("overwrite").csv(hdfs_output_path, header=True)
-        logger.info(f"Datos limpios guardados en HDFS: {hdfs_output_path}")
         
         return df

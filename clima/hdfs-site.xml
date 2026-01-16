@@ -1,0 +1,25 @@
+<configuration>
+  <property>
+    <name>dfs.replication</name>
+    <value>1</value>
+    <description>Usar réplica 1 para entornos de desarrollo / single-node</description>
+  </property>
+
+  <property>
+    <name>dfs.namenode.name.dir</name>
+    <value>file:///hadoop/dfs/name</value>
+    <description>Directorio local para metadata del NameNode (debe existir en el contenedor)</description>
+  </property>
+
+  <property>
+    <name>dfs.datanode.data.dir</name>
+    <value>file:///hadoop/dfs/data</value>
+    <description>Directorio local para bloques del DataNode</description>
+  </property>
+
+  <property>
+    <name>dfs.webhdfs.enabled</name>
+    <value>true</value>
+    <description>Habilita WebHDFS (útil para accesos HTTP/REST)</description>
+  </property>
+</configuration>

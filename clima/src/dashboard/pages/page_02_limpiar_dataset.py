@@ -1,18 +1,25 @@
+import tempfile
+import shutil
 import streamlit as st
 import pandas as pd
+from pyspark import SparkContext
 from pyspark.sql import SparkSession
+from pyspark.sql.utils import IllegalArgumentException
+from py4j.protocol import Py4JJavaError
 import os
 import sys
 
 sys.path.append(os.path.join(os.path.dirname(__file__), '..', '..'))
 # IMPORTACIONES A MODO ABSOLUTO (antes había imports relativos que provocaban el error)
-from tools.download_data import check_file_exists_in_hdfs
+from tools.download_data import check_file_exists_in_hdfs, run_command, verify_hdfs_upload, upload_to_hdfs, HDFS_PATH, FILE_NAME
 from preprocessing.P01_normalize import DataNormalizer
 from preprocessing.P02_preEDA import PreEDAAnalyzer
 from preprocessing.P03_clean import DataCleaner
 from preprocessing.P04_imputer import KNNImputer
+from matplotlib.figure import Figure
+import plotly.graph_objs as go
 
-def show():
+def show(spark = None):
     """Página para limpiar y procesar el dataset."""
     
     st.title("🧹 Limpiar Dataset")
@@ -39,134 +46,101 @@ def show():
                 return
     
     df_spark = st.session_state.df_spark
-    
+
     # Aplicar normalización automáticamente
     if 'normalized' not in st.session_state:
         with st.spinner("Aplicando normalización..."):
-            try:
-                normalizer = DataNormalizer(df_spark)
-                df_spark = normalizer.normalize()
-                
-                # Actualizar datos en HDFS
-                df_spark.write.mode("overwrite").csv(
-                    "hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv",
-                    header=True
-                )
-                
+            # try:
+                normalizer = DataNormalizer(spark)
+                df_spark = normalizer.normalize(df_spark)
+                              
                 st.session_state.df_spark = df_spark
                 st.session_state.normalized = True
                 st.success("✅ Normalización aplicada y datos actualizados en HDFS")
-            except Exception as e:
-                st.error(f"❌ Error en normalización: {e}")
-                return
-    
-    # Ejecutar preEDA (usa la clase PreEDAAnalyzer)
-    analyzer = PreEDAAnalyzer(spark)
-    if 'preEDA_stats' not in st.session_state:
-        with st.spinner("Ejecutando preEDA..."):
-            # try:
-            stats_df, plots = analyzer.analyze("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv")
-            st.session_state.preEDA_stats = stats_df
-            st.session_state.preEDA_plots = plots
             # except Exception as e:
-            #     st.error(f"❌ Error en preEDA: {e}")
+            #     st.error(f"❌ Error en normalización: {e}")
             #     return
     
-    stats_df = st.session_state.preEDA_stats
+    # # Ejecutar preEDA (usa la clase PreEDAAnalyzer)
+    # analyzer = PreEDAAnalyzer(spark)
+    # if 'preEDA_stats' not in st.session_state:
+    #     with st.spinner("Ejecutando preEDA..."):
+    #         # usar directamente el DataFrame df_spark en lugar de la ruta HDFS
+    #         stats_df, plots = analyzer.analyze(df_spark)
+    #         st.session_state.preEDA_stats = stats_df
+    #         st.session_state.preEDA_plots = plots
+
+    # stats_df = st.session_state.preEDA_stats
+
+    # st.markdown("---")
+
+    # # Mostrar estadísticas preEDA
+    # st.subheader("📊 Estado del Dataset (preEDA)")
+    # st.dataframe(stats_df, use_container_width=True)
+
+    # # Mostrar plots (preEDA)
+    # if 'preEDA_plots' in st.session_state and st.session_state.preEDA_plots:
+    #     st.subheader("📈 Plots (preEDA)")
+    #     plots = st.session_state.preEDA_plots
+
+    #     # Normalizar a lista de (nombre, figura)
+    #     items = []
+    #     if isinstance(plots, dict):
+    #         items = list(plots.items())
+    #     elif isinstance(plots, (list, tuple)):
+    #         if plots and isinstance(plots[0], tuple) and isinstance(plots[0][0], str):
+    #             items = list(plots)
+    #         else:
+    #             items = [(f"plot_{i}", p) for i, p in enumerate(plots)]
+    #     else:
+    #         items = [("plot", plots)]
+
+    #     for name, fig in items:
+    #         try:
+    #             # Matplotlib Figure
+    #             try:
+    #                 if isinstance(fig, Figure):
+    #                     st.pyplot(fig)
+    #                     continue
+    #             except Exception:
+    #                 pass
+
+    #             # Plotly Figure
+    #             try:
+    #                 if isinstance(fig, go.Figure):
+    #                     st.plotly_chart(fig, use_container_width=True)
+    #                     continue
+    #             except Exception:
+    #                 pass
+
+    #             # Image bytes / PIL / numpy array
+    #             if isinstance(fig, (bytes, bytearray)):
+    #                 st.image(fig, caption=name, use_column_width=True)
+    #             else:
+    #                 # Fallback: write object (alt text/representation)
+    #                 st.write(f"**{name}**")
+    #                 st.write(fig)
+    #         except Exception as e:
+    #             st.write(f"Error mostrando {name}: {e}")
     
-    st.markdown("---")
-    
-    # Mostrar estadísticas preEDA
-    st.subheader("📊 Estado del Dataset (preEDA)")
-    st.dataframe(stats_df, use_container_width=True)
-    
+    df_spark = st.session_state.df_spark
     # Botón para limpiar (clean e imputer)
     if st.button("🧹 Limpiar Dataset"):
         with st.spinner("Aplicando limpieza y imputación..."):
             try:
-                df_spark = DataCleaner(df_spark).clean()
-                df_spark = KNNImputer(df_spark).impute()
+                df_spark = df_spark.repartition(8)
+                df_spark = DataCleaner(spark).clean(df_spark)
+                df_spark = KNNImputer(spark).impute(df_spark)
                 st.session_state.df_spark = df_spark
                 st.success("✅ Limpieza e imputación aplicadas")
-                # Recalcular preEDA usando el analizador sobre la ruta en HDFS
-                stats_df, plots = analyzer.analyze("hdfs://namenode:9000/clima/GlobalLandTemperaturesByCity.csv")
-                st.session_state.preEDA_stats = stats_df
-                st.session_state.preEDA_plots = plots
+
+                # Guardar el dataset limpio en HDFS; Spark write returns None, so catch exceptions instead of checking a return value
+                try:
+                    df_spark.write.mode("overwrite").parquet("hdfs://namenode:9000/clima/cleaned_dataset.parquet")
+                    st.success("✅ Dataset guardado en HDFS: hdfs://namenode:9000/clima/cleaned_dataset.parquet")
+                except Exception as e:
+                    st.error(f"❌ Error guardando el dataset limpio en HDFS: {e}")
+                    return
             except Exception as e:
-                st.error(f"❌ Error en limpieza: {e}")
-    
-    st.markdown("---")
-    
-    # tab1, tab2, tab3, tab4 = st.tabs(use_container_width
-    #     ["Valores Faltantes", "Outliers", "Normalización", "Transformaciones"]
-    # )
-    
-    # with tab1:
-    #     st.subheader("Manejo de Valores Faltantes")
-        
-    #     col1, col2 = st.columns(2)
-        
-    #     with col1:
-    #         st.markdown("**Resumen de valores faltantes**")
-    #         missing = st.session_state.df.isnull().sum()
-    #         st.dataframe(missing[missing > 0], use_container_width=True)
-        
-    #     with col2:
-    #         method = st.selectbox(
-    #             "Selecciona método de imputación",
-    #             ["Media", "Mediana", "Moda", "KNN"]
-    #         )
-            
-    #         if st.button("Aplicar imputación"):
-    #             st.success(f"✅ Imputación aplicada usando {method}")
-    
-    # with tab2:
-    #     st.subheader("Detección y Manejo de Outliers")
-        
-    #     column = st.selectbox("Selecciona columna", st.session_state.df.columns)
-    #     method = st.selectbox(
-    #         "Método de detección",
-    #         ["IQR", "Z-Score", "Isolation Forest"]
-    #     )
-        
-    #     if st.button("Detectar outliers"):
-    #         st.info(f"Detectando outliers en {column} usando {method}...")
-    
-    # with tab3:
-    #     st.subheader("Normalización de Datos")
-        
-    #     norm_method = st.selectbox(
-    #         "Selecciona método de normalización",
-    #         ["Min-Max (0-1)", "Z-Score", "Robust Scaler"]
-    #     )
-        
-    #     columns = st.multiselect(
-    #         "Columnas a normalizar",
-    #         st.session_state.df.select_dtypes(include=['float64', 'int64']).columns
-    #     )
-        
-    #     if st.button("Aplicar normalización"):
-    #         st.success(f"✅ Normalización {norm_method} aplicada")
-    
-    # with tab4:
-    #     st.subheader("Transformaciones Adicionales")
-        
-    #     col1, col2 = st.columns(2)
-        
-    #     with col1:
-    #         if st.checkbox("Eliminar duplicados"):
-    #             st.success("✅ Duplicados eliminados")
-            
-    #         if st.checkbox("Convertir tipos de datos"):
-    #             st.info("Configurar conversiones...")
-        
-    #     with col2:
-    #         if st.checkbox("Crear variables derivadas"):
-    #             st.info("Crear nuevas variables...")
-            
-    #         if st.checkbox("Filtrar datos"):
-    #             st.info("Establecer criterios de filtrado...")
-    
-    # st.markdown("---")
-    # st.markdown("**Resumen del dataset procesado**")
-    # st.dataframe(st.session_state.df.head(), use_container_width=True)
+                st.error(f"❌ Error durante limpieza/imputación: {e}")
+                return

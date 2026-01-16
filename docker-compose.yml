@@ -60,6 +60,26 @@ services:
     env_file:
       - ./hadoop.env
 
+  # --- NUEVOS NODEMANAGERS para YARN (más nodemanager = más contenedores gestionados por YARN) ---
+  nodemanager2:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager2
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    env_file:
+      - ./hadoop.env
+
+  nodemanager3:
+    image: bde2020/hadoop-nodemanager:2.0.0-hadoop3.2.1-java8
+    container_name: nodemanager3
+    restart: always
+    environment:
+      SERVICE_PRECONDITION: "namenode:9000 namenode:9870 datanode:9864 resourcemanager:8088"
+    env_file:
+      - ./hadoop.env
+  # --- fin nuevos nodemanagers ---
+
   historyserver:
     image: bde2020/hadoop-historyserver:2.0.0-hadoop3.2.1-java8
     container_name: historyserver
@@ -83,6 +103,9 @@ services:
     environment:
       - INIT_DAEMON_STEP=setup_spark
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      # Aumentar memoria para el master (si la imagen lo respeta)
+      - SPARK_WORKER_MEMORY=4g
+
 
   spark-worker-1:
     image: bde2020/spark-worker:3.0.0-hadoop3.2
@@ -94,6 +117,36 @@ services:
     environment:
       - "SPARK_MASTER=spark://spark-master:7077"
       - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SPARK_WORKER_MEMORY=8g
+      - SPARK_WORKER_CORES=2
+
+  # --- NUEVOS SPARK WORKERS (añade más si necesitas) ---
+  spark-worker-2:
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
+    container_name: spark-worker-2
+    depends_on:
+      - spark-master
+    ports:
+      - "8082:8081"    # mapa puerto UI host:container (host 8082 -> container 8081)
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SPARK_WORKER_MEMORY=8g
+      - SPARK_WORKER_CORES=2
+
+  spark-worker-3:
+    image: bde2020/spark-worker:3.0.0-hadoop3.2
+    container_name: spark-worker-3
+    depends_on:
+      - spark-master
+    ports:
+      - "8083:8081"
+    environment:
+      - "SPARK_MASTER=spark://spark-master:7077"
+      - CORE_CONF_fs_defaultFS=hdfs://namenode:9000
+      - SPARK_WORKER_MEMORY=8g
+      - SPARK_WORKER_CORES=2
+  # --- fin nuevos spark workers ---
 
   hive-server:
     image: bde2020/hive:2.3.2-postgresql-metastore
@@ -150,6 +203,12 @@ services:
       - KAGGLE_CONFIG_DIR=/root/.kaggle
       - KAGGLE_API_TOKEN=KGAT_0aaec0d4ffb7f660a44ec781b1599768
       - KAGGLE_USERNAME=evelizespinaco
+      # Control de memoria para el driver (la app que crea SparkSession)
+      - SPARK_DRIVER_MEMORY=2g
+      - SPARK_EXECUTOR_MEMORY=2g
+      - SPARK_EXECUTOR_CORES=2
+      - SPARK_DRIVER_CORES=2
+
     ports:
       - "8501:8501"
     volumes:

@@ -1,75 +1,54 @@
-# Imagen base: Python 3.11 slim (Debian)
-FROM python:3.11-slim
+# Dockerfile: base con Java 17 (Temurin) y Python
+FROM eclipse-temurin:17-jdk-jammy
 
-# Etiqueta del contenedor
-LABEL maintainer="clima" \
-      description="Contenedor con Python 3.11 y pipeline de procesamiento de datos climáticos"
+LABEL maintainer="clima" description="Python + Java17 + Hadoop client"
 
-# Variables de entorno
 ENV PYTHONUNBUFFERED=1 \
     PYTHONDONTWRITEBYTECODE=1 \
-    STREAMLIT_SERVER_MAX_UPLOAD_SIZE=1024
+    STREAMLIT_SERVER_MAX_UPLOAD_SIZE=1024 \
+    JAVA_HOME=/usr/lib/jvm/java-17-temurin
 
-# 1. Instalar dependencias del sistema necesarias
+# Instalar Python 3.11 y utilidades
 RUN apt-get update && apt-get install -y --no-install-recommends \
-    curl \
-    netcat-openbsd \
-    default-jre-headless \
-    wget \
-    procps \
+    python3.11 python3.11-venv python3-pip python3-distutils \
+    ca-certificates curl netcat-openbsd wget procps gnupg \
     && rm -rf /var/lib/apt/lists/*
 
-# Variable de entorno para Java (necesario para PySpark)
-ENV JAVA_HOME=/usr/lib/jvm/default-java
+# Opcional: crear symlinks para python/pip si los necesitas
+RUN ln -s /usr/bin/python3.11 /usr/bin/python && ln -s /usr/bin/pip3 /usr/bin/pip || true
 
-# 2. Instalar cliente HDFS (Hadoop)
+# Instalar cliente Hadoop
 RUN wget -q https://archive.apache.org/dist/hadoop/common/hadoop-3.2.1/hadoop-3.2.1.tar.gz \
     && tar -xzf hadoop-3.2.1.tar.gz -C /opt \
     && mv /opt/hadoop-3.2.1 /opt/hadoop \
     && rm hadoop-3.2.1.tar.gz
 
-# 3. Configurar variables de entorno para Hadoop
 ENV HADOOP_HOME=/opt/hadoop
 ENV HADOOP_CONF_DIR=$HADOOP_HOME/etc/hadoop
-ENV HADOOP_COMMON_HOME=$HADOOP_HOME
-ENV HADOOP_HDFS_HOME=$HADOOP_HOME
-ENV HADOOP_YARN_HOME=$HADOOP_HOME
-ENV HADOOP_MAPRED_HOME=$HADOOP_HOME
-ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin
+ENV PATH=$PATH:$HADOOP_HOME/bin:$HADOOP_HOME/sbin:$JAVA_HOME/bin
 
-# 4. Configurar permisos para Hadoop
-RUN chmod +x $HADOOP_HOME/bin/* \
-    && chmod +x $HADOOP_HOME/sbin/*
+# Crear usuario no-root y preparar app dir
+RUN useradd -m -s /bin/bash appuser \
+    && mkdir -p /app /app/logs /tmp/hadoop-root \
+    && chown -R appuser:appuser /app /app/logs /tmp/hadoop-root /opt/hadoop
 
-# 5. Crear directorio de la aplicación
 WORKDIR /app
 
-# 6. Copiar requirements primero (para aprovechar cache de Docker)
+# Copiar requirements e instalar dependencias Python
 COPY requirements.txt /app/
+RUN pip install --no-cache-dir --upgrade pip setuptools wheel \
+    && pip install --no-cache-dir -r requirements.txt
 
-# 7. Instalar dependencias Python
-RUN pip install --no-cache-dir --upgrade pip setuptools wheel && \
-    pip install --no-cache-dir -r requirements.txt
-
-# 8. Copiar archivo de configuración de Hadoop
+# Copiar configs Hadoop (asegúrate de tenerlos en repo)
 COPY core-site.xml $HADOOP_CONF_DIR/
+COPY yarn-site.xml $HADOOP_CONF_DIR/
+COPY hdfs-site.xml $HADOOP_CONF_DIR/
 
-# 9. Copiar el resto del proyecto
-COPY . /app/
+# Copiar app y dar permisos
+COPY --chown=appuser:appuser . /app/
+RUN chmod +x /app/start_app.sh && chown appuser:appuser /app/start_app.sh
 
-# 10. Crear directorios de logs
-RUN mkdir -p /app/logs \
-    && mkdir -p /tmp/hadoop-root
-
-# 11. Configurar permisos para directorios temporales
-RUN chmod -R 777 /tmp/hadoop-root \
-    && chmod -R 777 /app/logs
-
-# 12. Hacer ejecutable el script de arranque
-RUN chmod +x /app/start_app.sh
-
-# Exponer puertos (Spark UI y Streamlit)
 EXPOSE 4040 8501
 
-# Ejecutar script que espera servicios y lanza Streamlit
+USER appuser
 CMD ["/bin/bash", "/app/start_app.sh"]

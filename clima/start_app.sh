@@ -4,6 +4,30 @@ echo "=========================================="
 echo "  INICIANDO APLICACIÓN CLIMA"
 echo "=========================================="
 
+# --- NUEVO: detectar java en tiempo de ejecución y fijar JAVA_HOME dinámicamente ---
+if command -v java >/dev/null 2>&1; then
+    JAVA_BIN=$(readlink -f "$(command -v java)")
+    JAVA_HOME_DIR=$(dirname "$(dirname "$JAVA_BIN")")
+    export JAVA_HOME="${JAVA_HOME_DIR}"
+    export PATH="${JAVA_HOME}/bin:${PATH}"
+    echo "🔧 JAVA detectado: ${JAVA_BIN}"
+    echo "🔧 JAVA_HOME establecido en: ${JAVA_HOME}"
+    java -version 2>&1 | sed -n '1,5p'
+else
+    echo "❌ java no está en PATH. Asegúrate de que la JRE/JDK esté instalada en la imagen."
+    echo "    - Si usas una imagen base con Java (ej. eclipse-temurin), verifica que 'java' exista."
+    echo "    - Alternativa: instala openjdk o temurin en el Dockerfile."
+    exit 1
+fi
+# --- FIN NUEVO BLOQUE ---
+
+# Establecer valores por defecto de memoria para Spark si no están definidos
+: "${SPARK_DRIVER_MEMORY:=4g}"
+: "${SPARK_EXECUTOR_MEMORY:=2g}"
+: "${SPARK_WORKER_MEMORY:=6g}"
+export SPARK_DRIVER_MEMORY SPARK_EXECUTOR_MEMORY SPARK_WORKER_MEMORY
+echo "🔧 SPARK_DRIVER_MEMORY=${SPARK_DRIVER_MEMORY}, SPARK_EXECUTOR_MEMORY=${SPARK_EXECUTOR_MEMORY}, SPARK_WORKER_MEMORY=${SPARK_WORKER_MEMORY}"
+
 # Función para verificar si el namenode está disponible
 wait_for_namenode() {
     echo "⏳ Esperando a que HDFS Namenode esté disponible..."
